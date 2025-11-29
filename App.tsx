@@ -13,6 +13,11 @@ const App: React.FC = () => {
   const [formState, setFormState] = useState<FormState>({
     pages: []
   });
+  
+  // History State
+  const [past, setPast] = useState<FormState[]>([]);
+  const [future, setFuture] = useState<FormState[]>([]);
+
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [zoom, setZoom] = useState<number>(1);
   const [isLoading, setIsLoading] = useState(false);
@@ -26,6 +31,51 @@ const App: React.FC = () => {
     initialX: number;
     initialY: number;
   } | null>(null);
+
+  // --- History Helpers ---
+  const recordHistory = () => {
+    setPast(prev => [...prev, formState]);
+    setFuture([]);
+  };
+
+  const undo = () => {
+    if (past.length === 0) return;
+    const previous = past[past.length - 1];
+    const newPast = past.slice(0, past.length - 1);
+    
+    setFuture(prev => [formState, ...prev]);
+    setFormState(previous);
+    setPast(newPast);
+    setSelectedId(null);
+  };
+
+  const redo = () => {
+    if (future.length === 0) return;
+    const next = future[0];
+    const newFuture = future.slice(1);
+    
+    setPast(prev => [...prev, formState]);
+    setFormState(next);
+    setFuture(newFuture);
+    setSelectedId(null);
+  };
+
+  // Keyboard Shortcuts for Undo/Redo
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+        if ((e.metaKey || e.ctrlKey) && e.key === 'z') {
+            e.preventDefault();
+            undo();
+        }
+        if ((e.metaKey || e.ctrlKey) && e.key === 'y') {
+            e.preventDefault();
+            redo();
+        }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [past, future, formState]);
+
 
   // --- Helpers to find elements ---
   const findElementAndPage = (elementId: string) => {
@@ -45,6 +95,7 @@ const App: React.FC = () => {
   // --- Handlers for Toolbar ---
 
   const handleUpload = (files: FileList) => {
+    recordHistory();
     // Process multiple files
     Array.from(files).forEach(file => {
       const reader = new FileReader();
@@ -76,6 +127,7 @@ const App: React.FC = () => {
         }
     }
 
+    recordHistory();
     setIsLoading(true);
     try {
         const newPages: Page[] = [];
@@ -128,6 +180,7 @@ const App: React.FC = () => {
 
   const handleClearAll = () => {
     if (window.confirm("¿Estás seguro de que quieres borrar todo?")) {
+        recordHistory();
         setFormState({ pages: [] });
         setSelectedId(null);
     }
@@ -135,6 +188,7 @@ const App: React.FC = () => {
 
   const handleRemovePage = (pageId: string) => {
     if (window.confirm("¿Eliminar esta página?")) {
+        recordHistory();
         setFormState(prev => ({
             pages: prev.pages.filter(p => p.id !== pageId)
         }));
@@ -142,6 +196,7 @@ const App: React.FC = () => {
   };
 
   const movePage = (index: number, direction: 'up' | 'down') => {
+    recordHistory();
     setFormState(prev => {
       const newPages = [...prev.pages];
       const targetIndex = direction === 'up' ? index - 1 : index + 1;
@@ -170,6 +225,7 @@ const App: React.FC = () => {
         if (typeof e.target?.result === 'string') {
           const parsed = JSON.parse(e.target.result);
           
+          recordHistory();
           // Migration logic for old single-image format
           if (parsed.elements && parsed.backgroundImage) {
             setFormState({
@@ -229,6 +285,7 @@ const App: React.FC = () => {
       height: defaultFontSize
     };
 
+    recordHistory();
     setFormState(prev => ({
       pages: prev.pages.map(p => {
         if (p.id === pageId) {
@@ -238,6 +295,13 @@ const App: React.FC = () => {
       })
     }));
     setSelectedId(newElement.id);
+  };
+
+  const handleBackgroundClick = (e: React.MouseEvent) => {
+    // If clicking directly on the main container (gray bg), deselect
+    if (e.target === e.currentTarget) {
+        setSelectedId(null);
+    }
   };
 
   // --- Handlers for Elements ---
@@ -252,6 +316,7 @@ const App: React.FC = () => {
   };
 
   const handleElementDelete = (id: string) => {
+    recordHistory();
     setFormState(prev => ({
       pages: prev.pages.map(page => ({
         ...page,
@@ -263,6 +328,7 @@ const App: React.FC = () => {
 
   const handleStyleUpdate = (style: Partial<TextElement>) => {
     if (selectedId) {
+      recordHistory();
       handleElementChange(selectedId, style);
     }
   };
@@ -273,6 +339,8 @@ const App: React.FC = () => {
     e.preventDefault();
     e.stopPropagation();
     
+    recordHistory(); // Record state before dragging starts
+
     const result = findElementAndPage(id);
     if (!result) return;
     const { element, page } = result;
@@ -360,14 +428,21 @@ const App: React.FC = () => {
         hasPages={formState.pages.length > 0}
         zoom={zoom}
         onZoomChange={setZoom}
+        onUndo={undo}
+        onRedo={redo}
+        canUndo={past.length > 0}
+        canRedo={future.length > 0}
       />
 
-      {/* Main Workspace */}
-      <div className="flex-1 overflow-auto p-4 md:p-8 flex flex-col items-center gap-12 bg-gray-100 print:bg-white print:p-0 print:gap-0">
+      {/* Main Workspace - Added click handler for background deselection */}
+      <div 
+        className="flex-1 overflow-auto p-4 md:p-8 flex flex-col items-center gap-12 bg-gray-100 print:bg-white print:p-0 print:gap-0"
+        onClick={handleBackgroundClick}
+      >
         
         {formState.pages.length === 0 ? (
            // Empty State
-           <div className="w-[210mm] h-[297mm] flex flex-col items-center justify-center border-2 border-dashed border-gray-300 bg-white shadow-lg opacity-50">
+           <div className="w-[210mm] h-[297mm] flex flex-col items-center justify-center border-2 border-dashed border-gray-300 bg-white shadow-lg opacity-50 pointer-events-none">
                 <div className="text-center text-gray-400 select-none">
                     <p className="text-4xl mb-4">📄</p>
                     <p className="text-lg font-medium">No hay páginas</p>
@@ -383,7 +458,10 @@ const App: React.FC = () => {
                >
                    {/* Page Container with Zoom */}
                    <div
-                     onClick={(e) => handleCanvasClick(e, page.id)}
+                     onClick={(e) => {
+                         e.stopPropagation(); // Stop propagation to avoid immediate deselect from background click
+                         handleCanvasClick(e, page.id);
+                     }}
                      className="relative bg-white shadow-lg print:shadow-none print:w-full origin-top"
                      style={{
                         width: 'fit-content',
@@ -409,6 +487,7 @@ const App: React.FC = () => {
                                onChange={handleElementChange}
                                onDelete={handleElementDelete}
                                onMouseDown={startDrag}
+                               onRecordHistory={recordHistory}
                            />
                        ))}
                    </div>
@@ -464,7 +543,7 @@ const App: React.FC = () => {
       {/* Footer / Instructions */}
       <div className="bg-white border-t border-gray-200 p-2 text-center text-xs text-gray-500 no-print">
         {formState.pages.length > 0 
-            ? `Zoom: ${Math.round(zoom * 100)}% | Haga clic sobre una página para escribir. Arrastre los campos para moverlos.` 
+            ? `Zoom: ${Math.round(zoom * 100)}% | Haga clic sobre una página para escribir. Arrastre los campos para moverlos. Ctrl+Z para deshacer.` 
             : "Selecciona una plantilla o sube imágenes PNG para comenzar."}
       </div>
     </div>

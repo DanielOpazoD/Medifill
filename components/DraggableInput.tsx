@@ -11,6 +11,7 @@ interface DraggableInputProps {
   onChange: (id: string, updates: Partial<TextElement>) => void;
   onDelete: (id: string) => void;
   onMouseDown: (e: React.MouseEvent, id: string) => void;
+  onRecordHistory: () => void;
 }
 
 export const DraggableInput: React.FC<DraggableInputProps> = ({
@@ -20,7 +21,8 @@ export const DraggableInput: React.FC<DraggableInputProps> = ({
   onSelect,
   onChange,
   onDelete,
-  onMouseDown
+  onMouseDown,
+  onRecordHistory
 }) => {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [isEditing, setIsEditing] = useState(false);
@@ -35,6 +37,9 @@ export const DraggableInput: React.FC<DraggableInputProps> = ({
 
   const handleResize = (e: React.MouseEvent) => {
     e.stopPropagation();
+    // Record history before resize starts
+    onRecordHistory();
+    
     const startX = e.clientX;
     const startWidth = element.width;
 
@@ -53,9 +58,6 @@ export const DraggableInput: React.FC<DraggableInputProps> = ({
   };
 
   // Determine if we should show the "empty field" visual cue
-  // Shows if: it has no text AND is not currently selected
-  // We check for placeholder existence to specifically style "pre-configured" fields, 
-  // but generally any empty field helps to see where it is.
   const isPlaceholderMode = !element.text && !isSelected;
 
   return (
@@ -107,18 +109,23 @@ export const DraggableInput: React.FC<DraggableInputProps> = ({
           ref={textareaRef}
           value={element.text}
           onChange={(e) => onChange(element.id, { text: e.target.value })}
-          className="w-full bg-transparent resize-none outline-none overflow-hidden px-1 py-0 block placeholder:text-gray-400/70 print:placeholder:text-transparent"
+          className="w-full bg-transparent resize-none outline-none overflow-hidden px-1 py-0.5 block placeholder:text-gray-400/70 print:placeholder:text-transparent"
           style={{
             fontSize: `${element.fontSize}px`,
             fontWeight: element.isBold ? 'bold' : 'normal',
             fontStyle: element.isItalic ? 'italic' : 'normal',
-            lineHeight: '1.1',
-            minHeight: '1em',
+            lineHeight: '1.2', // Increased slightly for better breathing room
+            minHeight: '1.2em',
             fontFamily: 'Arial, sans-serif' // Standard medical form font
           }}
           placeholder={element.placeholder || (isSelected ? "Escriba..." : "")}
           spellCheck={false}
-          onFocus={() => setIsEditing(true)}
+          onFocus={() => {
+            setIsEditing(true);
+            // We record history on focus so if they change text, we have a save point.
+            // If they don't change anything, undo/redo is harmlessly idempotent.
+            onRecordHistory(); 
+          }}
           onBlur={() => setIsEditing(false)}
         />
         

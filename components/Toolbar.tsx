@@ -1,5 +1,6 @@
+
 import React, { useRef } from 'react';
-import { Upload, Printer, Download, FileJson, Type, Bold, Italic, Trash2, RotateCcw, ZoomIn, ZoomOut, LayoutTemplate } from 'lucide-react';
+import { Upload, Printer, Download, FileJson, Type, Bold, Italic, Trash2, RotateCcw, RotateCw, ZoomIn, ZoomOut, LayoutTemplate } from 'lucide-react';
 import { TextElement } from '../types';
 import { TEMPLATES } from '../templates';
 
@@ -16,6 +17,10 @@ interface ToolbarProps {
   hasPages: boolean;
   zoom: number;
   onZoomChange: (zoom: number) => void;
+  onUndo: () => void;
+  onRedo: () => void;
+  canUndo: boolean;
+  canRedo: boolean;
 }
 
 export const Toolbar: React.FC<ToolbarProps> = ({
@@ -30,7 +35,11 @@ export const Toolbar: React.FC<ToolbarProps> = ({
   onDeleteSelected,
   hasPages,
   zoom,
-  onZoomChange
+  onZoomChange,
+  onUndo,
+  onRedo,
+  canUndo,
+  canRedo
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const jsonInputRef = useRef<HTMLInputElement>(null);
@@ -97,7 +106,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
           title="Cargar imágenes desde tu PC"
         >
           <Upload size={16} />
-          <span className="hidden md:inline">{hasPages ? "Agregar" : "Subir Imágenes"}</span>
+          <span className="hidden md:inline">{hasPages ? "Agregar" : "Subir"}</span>
         </button>
 
         {hasPages && (
@@ -109,6 +118,30 @@ export const Toolbar: React.FC<ToolbarProps> = ({
                 <RotateCcw size={16} />
             </button>
         )}
+
+        <div className="h-6 w-px bg-gray-300 mx-1"></div>
+
+        {/* Undo/Redo */}
+        <div className="flex bg-gray-100 rounded p-1 gap-1">
+          <button 
+             onClick={onUndo}
+             disabled={!canUndo}
+             className="p-1.5 hover:bg-white hover:shadow-sm rounded text-gray-600 disabled:opacity-30 disabled:cursor-not-allowed"
+             title="Deshacer (Ctrl+Z)"
+          >
+            <RotateCcw size={16} />
+          </button>
+          <button 
+             onClick={onRedo}
+             disabled={!canRedo}
+             className="p-1.5 hover:bg-white hover:shadow-sm rounded text-gray-600 disabled:opacity-30 disabled:cursor-not-allowed"
+             title="Rehacer (Ctrl+Y)"
+          >
+            <RotateCw size={16} />
+          </button>
+        </div>
+
+        <div className="h-6 w-px bg-gray-300 mx-1"></div>
 
         <input
             type="file"
