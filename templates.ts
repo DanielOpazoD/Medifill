@@ -4,13 +4,16 @@ import { TemplateConfig } from './types';
 // Coordinates are estimated based on standard layouts. 
 // You can adjust 'x', 'y', 'width', and 'fontSize' to match your specific PNGs perfectly.
 
+// NOTE: On Netlify/Vite, files in the 'public' folder are served at the root.
+// If your images are in 'public/templates/', refer to them as '/templates/filename.png'.
+
 export const TEMPLATES: TemplateConfig[] = [
   {
     id: 'hospitalizado',
     name: 'Indicaciones Hospitalizado',
     pages: [
       {
-        filename: 'p1.png',
+        filename: '/templates/p1.png',
         // Page 1: Planificación de cuidados (Tables)
         elements: [
            // Example: Date fields in the table header
@@ -20,7 +23,7 @@ export const TEMPLATES: TemplateConfig[] = [
         ]
       },
       {
-        filename: 'p2.png',
+        filename: '/templates/p2.png',
         // Page 2: Indicaciones Médicas (Header with patient info)
         elements: [
           // Row 1: Nombre and Edad

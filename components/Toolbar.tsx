@@ -1,6 +1,6 @@
 
 import React, { useRef } from 'react';
-import { Upload, Printer, Download, FileJson, Type, Bold, Italic, Trash2, RotateCcw, RotateCw, ZoomIn, ZoomOut, LayoutTemplate } from 'lucide-react';
+import { Upload, Printer, Download, FileJson, Type, Bold, Italic, Trash2, RotateCcw, RotateCw, ZoomIn, ZoomOut, LayoutTemplate, Minus, Plus } from 'lucide-react';
 import { TextElement } from '../types';
 import { TEMPLATES } from '../templates';
 
@@ -61,6 +61,16 @@ export const Toolbar: React.FC<ToolbarProps> = ({
 
   const handleZoomIn = () => onZoomChange(Math.min(zoom + 0.1, 3.0));
   const handleZoomOut = () => onZoomChange(Math.max(zoom - 0.1, 0.25));
+
+  const changeLineHeight = (delta: number) => {
+    if (!selectedElement) return;
+    const current = selectedElement.lineHeight || 0.9;
+    const newValue = Math.max(0.5, Math.min(2.0, current + delta));
+    // Round to 1 decimal place to avoid floating point errors
+    onUpdateStyle({ lineHeight: Math.round(newValue * 10) / 10 });
+  };
+
+  const currentLineHeight = selectedElement?.lineHeight || 0.9;
 
   return (
     <div className="w-full bg-white border-b border-gray-200 shadow-sm p-4 flex flex-wrap items-center justify-between gap-4 sticky top-0 z-50 no-print">
@@ -228,6 +238,27 @@ export const Toolbar: React.FC<ToolbarProps> = ({
                   title="Tamaño de fuente"
               />
               <span className="text-xs text-gray-500">px</span>
+          </div>
+
+          {/* Line Height Control */}
+          <div className="flex items-center gap-1 bg-gray-100 rounded px-2 py-1" title="Interlineado">
+             <button 
+                onClick={() => changeLineHeight(-0.1)}
+                className="p-1 hover:bg-white hover:shadow-sm rounded text-gray-600"
+                disabled={currentLineHeight <= 0.5}
+             >
+                 <Minus size={14} />
+             </button>
+             <span className="text-xs font-medium w-8 text-center select-none">
+                {Math.round(currentLineHeight * 100)}%
+             </span>
+             <button 
+                onClick={() => changeLineHeight(0.1)}
+                className="p-1 hover:bg-white hover:shadow-sm rounded text-gray-600"
+                disabled={currentLineHeight >= 2.0}
+             >
+                 <Plus size={14} />
+             </button>
           </div>
 
           <button 

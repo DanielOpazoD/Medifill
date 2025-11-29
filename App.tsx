@@ -156,7 +156,8 @@ const App: React.FC = () => {
                 isBold: !!el.isBold,
                 isItalic: !!el.isItalic,
                 width: el.width || 200,
-                height: el.height || 30 // Approx height
+                height: el.height || 30, // Approx height
+                lineHeight: el.lineHeight || 0.9
             }));
 
             newPages.push({
@@ -282,7 +283,8 @@ const App: React.FC = () => {
       isBold: false,
       isItalic: false,
       width: 200,
-      height: defaultFontSize
+      height: defaultFontSize,
+      lineHeight: 0.9
     };
 
     recordHistory();

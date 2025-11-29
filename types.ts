@@ -10,6 +10,7 @@ export interface TextElement {
   isItalic: boolean;
   width: number; // width in pixels
   height: number; // height in pixels
+  lineHeight?: number; // Line height multiplier (default 0.9)
 }
 
 export interface Page {

@@ -33,7 +33,7 @@ export const DraggableInput: React.FC<DraggableInputProps> = ({
       textareaRef.current.style.height = 'auto';
       textareaRef.current.style.height = textareaRef.current.scrollHeight + 'px';
     }
-  }, [element.text, element.fontSize, element.width]);
+  }, [element.text, element.fontSize, element.width, element.lineHeight]);
 
   const handleResize = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -114,7 +114,7 @@ export const DraggableInput: React.FC<DraggableInputProps> = ({
             fontSize: `${element.fontSize}px`,
             fontWeight: element.isBold ? 'bold' : 'normal',
             fontStyle: element.isItalic ? 'italic' : 'normal',
-            lineHeight: '1.1', // Tight line height to match letter size
+            lineHeight: element.lineHeight || 0.9, // Default to 0.9 if not set
             fontFamily: 'Arial, sans-serif' // Standard medical form font
           }}
           placeholder={element.placeholder || (isSelected ? "..." : "")}
