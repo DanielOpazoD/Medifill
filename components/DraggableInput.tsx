@@ -1,3 +1,4 @@
+
 import React, { useRef, useEffect, useState } from 'react';
 import { TextElement } from '../types';
 import { GripVertical, Trash2 } from 'lucide-react';
@@ -29,7 +30,6 @@ export const DraggableInput: React.FC<DraggableInputProps> = ({
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
       textareaRef.current.style.height = textareaRef.current.scrollHeight + 'px';
-      // Update state with new height if it changed significantly (debouncing recommended in production, skipped here for simplicity)
     }
   }, [element.text, element.fontSize, element.width]);
 
@@ -51,6 +51,12 @@ export const DraggableInput: React.FC<DraggableInputProps> = ({
     document.addEventListener('mousemove', onMouseMove);
     document.addEventListener('mouseup', onMouseUp);
   };
+
+  // Determine if we should show the "empty field" visual cue
+  // Shows if: it has no text AND is not currently selected
+  // We check for placeholder existence to specifically style "pre-configured" fields, 
+  // but generally any empty field helps to see where it is.
+  const isPlaceholderMode = !element.text && !isSelected;
 
   return (
     <div
@@ -92,12 +98,16 @@ export const DraggableInput: React.FC<DraggableInputProps> = ({
       )}
 
       {/* The Text Input Area */}
-      <div className={`relative ${isSelected ? 'ring-2 ring-blue-400 ring-offset-1 rounded bg-blue-50/10' : 'hover:ring-1 hover:ring-gray-300/50 hover:bg-gray-50/10'}`}>
+      <div className={`relative transition-all duration-200
+        ${isSelected ? 'ring-2 ring-blue-400 ring-offset-1 rounded bg-blue-50/10' : ''}
+        ${isPlaceholderMode ? 'border border-dashed border-gray-400 bg-yellow-50/20 hover:bg-yellow-100/40' : 'hover:ring-1 hover:ring-gray-300/50 hover:bg-gray-50/10'}
+        print:border-none print:bg-transparent print:ring-0
+      `}>
         <textarea
           ref={textareaRef}
           value={element.text}
           onChange={(e) => onChange(element.id, { text: e.target.value })}
-          className="w-full bg-transparent resize-none outline-none overflow-hidden px-1 py-0 block"
+          className="w-full bg-transparent resize-none outline-none overflow-hidden px-1 py-0 block placeholder:text-gray-400/70 print:placeholder:text-transparent"
           style={{
             fontSize: `${element.fontSize}px`,
             fontWeight: element.isBold ? 'bold' : 'normal',
@@ -106,7 +116,7 @@ export const DraggableInput: React.FC<DraggableInputProps> = ({
             minHeight: '1em',
             fontFamily: 'Arial, sans-serif' // Standard medical form font
           }}
-          placeholder={isSelected ? "Texto..." : ""}
+          placeholder={element.placeholder || (isSelected ? "Escriba..." : "")}
           spellCheck={false}
           onFocus={() => setIsEditing(true)}
           onBlur={() => setIsEditing(false)}

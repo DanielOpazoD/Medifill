@@ -1,8 +1,10 @@
+
 export interface TextElement {
   id: string;
   x: number;
   y: number;
   text: string;
+  placeholder?: string; // Optional text to show when empty
   fontSize: number;
   isBold: boolean;
   isItalic: boolean;

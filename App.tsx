@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Toolbar } from './components/Toolbar';
 import { DraggableInput } from './components/DraggableInput';
@@ -98,6 +99,7 @@ const App: React.FC = () => {
                 x: el.x || 50,
                 y: el.y || 50,
                 text: el.text || '',
+                placeholder: el.placeholder, // Ensure placeholder is copied
                 fontSize: el.fontSize || 27,
                 isBold: !!el.isBold,
                 isItalic: !!el.isItalic,
