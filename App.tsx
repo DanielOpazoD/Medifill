@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Toolbar } from './components/Toolbar';
 import { DraggableInput } from './components/DraggableInput';
@@ -494,28 +493,26 @@ const App: React.FC = () => {
            formState.pages.map((page, index) => (
                <div 
                  key={page.id} 
-                 className="relative group/page print:break-after-page last:print:break-after-auto transition-all duration-200 ease-in-out block"
-                 // Force page break after each page container during print
-                 style={{ pageBreakAfter: 'always' }}
+                 className="relative group/page transition-all duration-200 ease-in-out block"
                >
-                   {/* Page Container with Zoom */}
+                   {/* Page Container with Zoom - Fixed to A4 Width */}
                    <div
                      onClick={(e) => {
                          e.stopPropagation(); // Stop propagation to avoid immediate deselect from background click
                          handleCanvasClick(e, page.id);
                      }}
-                     className="relative bg-white shadow-lg print:shadow-none print:w-full origin-top"
+                     className="relative bg-white shadow-lg a4-page print-page-reset origin-top"
                      style={{
-                        width: 'fit-content',
-                        cursor: 'crosshair',
+                        // Scale for screen, Reset for print via class
                         transform: `scale(${zoom})`,
-                        marginBottom: `${(zoom - 1) * 100}px` 
+                        marginBottom: `${(zoom - 1) * 100}px`,
+                        cursor: 'crosshair'
                      }}
                    >
                        <img 
                            src={page.imageUrl} 
                            alt={`Página ${index + 1}`} 
-                           className="max-w-none select-none pointer-events-none block max-w-[80vw] md:max-w-none print:max-w-full"
+                           className="w-full h-auto select-none pointer-events-none block"
                        />
                        
                        {/* Elements for this page */}
