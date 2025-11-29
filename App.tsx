@@ -1,24 +1,23 @@
+
 import React, { useState, useEffect } from 'react';
 import { Toolbar } from './components/Toolbar';
 import { DraggableInput } from './components/DraggableInput';
 import { TextElement, FormState, Page } from './types';
-import { Trash2, ChevronUp, ChevronDown } from 'lucide-react';
+import { Trash2, ChevronUp, ChevronDown, FilePlus } from 'lucide-react';
 import { TEMPLATES } from './templates';
 
 // Utility to generate IDs
 const generateId = () => Math.random().toString(36).substr(2, 9);
 
 const App: React.FC = () => {
-  const [formState, setFormState] = useState<FormState>({
-    pages: []
-  });
+  const [formState, setFormState] = useState<FormState>({ pages: [] });
   
   // History State
   const [past, setPast] = useState<FormState[]>([]);
   const [future, setFuture] = useState<FormState[]>([]);
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [zoom, setZoom] = useState<number>(1);
+  const [zoom, setZoom] = useState<number>(0.9); // Zoom inicial un poco más pequeño para ver la hoja mejor
   const [isLoading, setIsLoading] = useState(false);
   
   // App Preferences
@@ -44,7 +43,6 @@ const App: React.FC = () => {
     if (past.length === 0) return;
     const previous = past[past.length - 1];
     const newPast = past.slice(0, past.length - 1);
-    
     setFuture(prev => [formState, ...prev]);
     setFormState(previous);
     setPast(newPast);
@@ -55,7 +53,6 @@ const App: React.FC = () => {
     if (future.length === 0) return;
     const next = future[0];
     const newFuture = future.slice(1);
-    
     setPast(prev => [...prev, formState]);
     setFormState(next);
     setFuture(newFuture);
@@ -86,7 +83,7 @@ const App: React.FC = () => {
     const newElement: TextElement = {
         ...element,
         id: generateId(),
-        x: element.x + 20, // Offset slightly
+        x: element.x + 20,
         y: element.y + 20,
     };
 
@@ -104,36 +101,16 @@ const App: React.FC = () => {
   // Keyboard Shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-        // Undo / Redo
-        if ((e.metaKey || e.ctrlKey) && e.key === 'z') {
-            e.preventDefault();
-            undo();
-        }
-        if ((e.metaKey || e.ctrlKey) && e.key === 'y') {
-            e.preventDefault();
-            redo();
-        }
-
-        // Duplicate
+        if ((e.metaKey || e.ctrlKey) && e.key === 'z') { e.preventDefault(); undo(); }
+        if ((e.metaKey || e.ctrlKey) && e.key === 'y') { e.preventDefault(); redo(); }
         if ((e.metaKey || e.ctrlKey) && e.key === 'd') {
             e.preventDefault();
-            if (selectedId) {
-                handleElementDuplicate(selectedId);
-            }
+            if (selectedId) handleElementDuplicate(selectedId);
         }
-        
-        // Delete / Backspace
         if ((e.key === 'Delete' || e.key === 'Backspace') && selectedId) {
-            // Only delete if not typing in a textarea
-            if (document.activeElement?.tagName !== 'TEXTAREA') {
-                handleElementDelete(selectedId);
-            }
+            if (document.activeElement?.tagName !== 'TEXTAREA') handleElementDelete(selectedId);
         }
-
-        // Escape
-        if (e.key === 'Escape') {
-            setSelectedId(null);
-        }
+        if (e.key === 'Escape') setSelectedId(null);
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
@@ -144,7 +121,6 @@ const App: React.FC = () => {
 
   const handleUpload = (files: FileList) => {
     recordHistory();
-    // Process multiple files
     Array.from(files).forEach(file => {
       const reader = new FileReader();
       reader.onload = (e) => {
@@ -152,11 +128,7 @@ const App: React.FC = () => {
           setFormState(prev => ({
             pages: [
               ...prev.pages,
-              {
-                id: generateId(),
-                imageUrl: e.target?.result as string,
-                elements: []
-              }
+              { id: generateId(), imageUrl: e.target?.result as string, elements: [] }
             ]
           }));
         }
@@ -170,57 +142,42 @@ const App: React.FC = () => {
     if (!selectedTemplate) return;
 
     if (formState.pages.length > 0) {
-        if (!window.confirm("Cargar la plantilla reemplazará las páginas actuales. ¿Deseas continuar?")) {
-            return;
-        }
+        if (!window.confirm("Cargar la plantilla reemplazará las páginas actuales. ¿Deseas continuar?")) return;
     }
 
     recordHistory();
     setIsLoading(true);
     try {
         const newPages: Page[] = [];
-
         for (const pageConfig of selectedTemplate.pages) {
-            // Fetch the file from the public/root directory
             const response = await fetch(pageConfig.filename);
             if (!response.ok) throw new Error(`No se encontró el archivo ${pageConfig.filename}`);
             const blob = await response.blob();
-            
-            // Convert to Base64 to ensure portability
             const base64 = await new Promise<string>((resolve) => {
                 const reader = new FileReader();
                 reader.onloadend = () => resolve(reader.result as string);
                 reader.readAsDataURL(blob);
             });
-
-            // Map predefined elements if any
             const elements: TextElement[] = (pageConfig.elements || []).map(el => ({
                 id: generateId(),
                 x: el.x || 50,
                 y: el.y || 50,
                 text: el.text || '',
-                placeholder: el.placeholder, // Ensure placeholder is copied
+                placeholder: el.placeholder,
                 fontSize: el.fontSize || 27,
                 isBold: !!el.isBold,
                 isItalic: !!el.isItalic,
                 width: el.width || 200,
-                height: el.height || 30, // Approx height
+                height: el.height || 30,
                 lineHeight: el.lineHeight || lastLineHeight
             }));
-
-            newPages.push({
-                id: generateId(),
-                imageUrl: base64,
-                elements: elements
-            });
+            newPages.push({ id: generateId(), imageUrl: base64, elements: elements });
         }
-
         setFormState({ pages: newPages });
-        setZoom(1); // Reset zoom
+        setZoom(0.9);
         setSelectedId(null);
-
     } catch (error) {
-        alert("Error al cargar la plantilla. Asegúrate de que los archivos existan en la carpeta principal del proyecto.");
+        alert("Error al cargar la plantilla.");
         console.error(error);
     } finally {
         setIsLoading(false);
@@ -238,9 +195,7 @@ const App: React.FC = () => {
   const handleRemovePage = (pageId: string) => {
     if (window.confirm("¿Eliminar esta página?")) {
         recordHistory();
-        setFormState(prev => ({
-            pages: prev.pages.filter(p => p.id !== pageId)
-        }));
+        setFormState(prev => ({ pages: prev.pages.filter(p => p.id !== pageId) }));
     }
   };
 
@@ -249,7 +204,6 @@ const App: React.FC = () => {
     setFormState(prev => {
       const newPages = [...prev.pages];
       const targetIndex = direction === 'up' ? index - 1 : index + 1;
-      
       if (targetIndex >= 0 && targetIndex < newPages.length) {
         [newPages[index], newPages[targetIndex]] = [newPages[targetIndex], newPages[index]];
       }
@@ -273,20 +227,12 @@ const App: React.FC = () => {
       try {
         if (typeof e.target?.result === 'string') {
           const parsed = JSON.parse(e.target.result);
-          
           recordHistory();
-          // Migration logic for old single-image format
           if (parsed.elements && parsed.backgroundImage) {
             setFormState({
-                pages: [{
-                    id: generateId(),
-                    imageUrl: parsed.backgroundImage,
-                    elements: parsed.elements
-                }]
+                pages: [{ id: generateId(), imageUrl: parsed.backgroundImage, elements: parsed.elements }]
             });
-          }
-          // New multi-page format
-          else if (parsed.pages && Array.isArray(parsed.pages)) {
+          } else if (parsed.pages && Array.isArray(parsed.pages)) {
             setFormState(parsed);
           } else {
             alert("Formato de archivo inválido.");
@@ -301,46 +247,31 @@ const App: React.FC = () => {
 
   const handlePrint = () => {
     setSelectedId(null);
-    setTimeout(() => {
-      window.print();
-    }, 100);
+    setTimeout(() => window.print(), 100);
   };
 
   // --- Handlers for Canvas Interaction ---
-
   const handleCanvasClick = (e: React.MouseEvent, pageId: string) => {
     if (dragState) return;
-    
-    // Ensure we clicked the page container itself (currentTarget)
     const rect = e.currentTarget.getBoundingClientRect();
-    
-    // Adjust coordinates based on zoom level
     const x = (e.clientX - rect.left) / zoom;
     const y = (e.clientY - rect.top) / zoom;
-
     const defaultFontSize = 27;
-    // Align click with baseline approx (move box up by ~75% of font size)
     const adjustedY = y - (defaultFontSize * 0.75);
 
     const newElement: TextElement = {
       id: generateId(),
-      x,
-      y: adjustedY,
-      text: '',
-      fontSize: defaultFontSize,
-      isBold: false,
-      isItalic: false,
-      width: 200,
-      height: defaultFontSize,
-      lineHeight: lastLineHeight // Use stored preference
+      x, y: adjustedY,
+      text: '', fontSize: defaultFontSize,
+      isBold: false, isItalic: false,
+      width: 200, height: defaultFontSize,
+      lineHeight: lastLineHeight
     };
 
     recordHistory();
     setFormState(prev => ({
       pages: prev.pages.map(p => {
-        if (p.id === pageId) {
-          return { ...p, elements: [...p.elements, newElement] };
-        }
+        if (p.id === pageId) return { ...p, elements: [...p.elements, newElement] };
         return p;
       })
     }));
@@ -348,13 +279,8 @@ const App: React.FC = () => {
   };
 
   const handleBackgroundClick = (e: React.MouseEvent) => {
-    // If clicking directly on the main container (gray bg), deselect
-    if (e.target === e.currentTarget) {
-        setSelectedId(null);
-    }
+    if (e.target === e.currentTarget) setSelectedId(null);
   };
-
-  // --- Handlers for Elements ---
 
   const handleElementChange = (id: string, updates: Partial<TextElement>) => {
     setFormState(prev => ({
@@ -377,36 +303,24 @@ const App: React.FC = () => {
   };
 
   const handleStyleUpdate = (style: Partial<TextElement>) => {
-    // If lineHeight is updated, save it as preference for new boxes
-    if (style.lineHeight !== undefined) {
-        setLastLineHeight(style.lineHeight);
-    }
-
+    if (style.lineHeight !== undefined) setLastLineHeight(style.lineHeight);
     if (selectedId) {
       recordHistory();
       handleElementChange(selectedId, style);
     }
   };
 
-  // --- Drag Logic ---
-
   const startDrag = (e: React.MouseEvent, id: string) => {
     e.preventDefault();
     e.stopPropagation();
-    
-    recordHistory(); // Record state before dragging starts
-
+    recordHistory();
     const result = findElementAndPage(id);
     if (!result) return;
     const { element, page } = result;
-
     setDragState({
-      id,
-      pageId: page.id,
-      startX: e.clientX,
-      startY: e.clientY,
-      initialX: element.x,
-      initialY: element.y
+      id, pageId: page.id,
+      startX: e.clientX, startY: e.clientY,
+      initialX: element.x, initialY: element.y
     });
     setSelectedId(id);
   };
@@ -414,26 +328,15 @@ const App: React.FC = () => {
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
       if (!dragState) return;
-
-      // Adjust delta based on zoom
       const deltaX = (e.clientX - dragState.startX) / zoom;
       const deltaY = (e.clientY - dragState.startY) / zoom;
-
-      const newX = dragState.initialX + deltaX;
-      const newY = dragState.initialY + deltaY;
-
-      handleElementChange(dragState.id, { x: newX, y: newY });
+      handleElementChange(dragState.id, { x: dragState.initialX + deltaX, y: dragState.initialY + deltaY });
     };
-
-    const handleMouseUp = () => {
-      setDragState(null);
-    };
-
+    const handleMouseUp = () => setDragState(null);
     if (dragState) {
       document.addEventListener('mousemove', handleMouseMove);
       document.addEventListener('mouseup', handleMouseUp);
     }
-
     return () => {
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseup', handleMouseUp);
@@ -442,137 +345,100 @@ const App: React.FC = () => {
 
 
   return (
-    <div className="flex flex-col h-screen w-full bg-gray-50 overflow-hidden">
+    <div className="flex flex-col h-screen w-full bg-slate-200/80 overflow-hidden font-sans">
       
-      {/* Loading Overlay */}
       {isLoading && (
-        <div className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center">
-            <div className="bg-white p-6 rounded shadow-lg text-center">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-                <p>Cargando plantilla...</p>
+        <div className="fixed inset-0 bg-white/80 backdrop-blur-sm z-[100] flex items-center justify-center">
+            <div className="bg-white p-8 rounded-2xl shadow-2xl text-center border border-slate-100">
+                <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                <p className="text-slate-600 font-medium">Preparando documento...</p>
             </div>
         </div>
       )}
 
       <Toolbar 
-        onUpload={handleUpload}
-        onPrint={handlePrint}
-        onExport={handleExport}
-        onImport={handleImport}
-        onClear={handleClearAll}
-        onLoadTemplate={handleLoadTemplate}
-        selectedElement={getSelectedElement()}
-        onUpdateStyle={handleStyleUpdate}
+        onUpload={handleUpload} onPrint={handlePrint} onExport={handleExport}
+        onImport={handleImport} onClear={handleClearAll} onLoadTemplate={handleLoadTemplate}
+        selectedElement={getSelectedElement()} onUpdateStyle={handleStyleUpdate}
         onDeleteSelected={() => selectedId && handleElementDelete(selectedId)}
-        hasPages={formState.pages.length > 0}
-        zoom={zoom}
-        onZoomChange={setZoom}
-        onUndo={undo}
-        onRedo={redo}
-        canUndo={past.length > 0}
-        canRedo={future.length > 0}
+        hasPages={formState.pages.length > 0} zoom={zoom} onZoomChange={setZoom}
+        onUndo={undo} onRedo={redo} canUndo={past.length > 0} canRedo={future.length > 0}
       />
 
-      {/* Main Workspace - Added click handler for background deselection */}
+      {/* Main Workspace */}
       <div 
-        className="flex-1 overflow-auto p-4 md:p-8 flex flex-col items-center gap-12 bg-gray-100 print:bg-white print:p-0 print:gap-0 print:block print:overflow-visible"
+        className="flex-1 overflow-auto p-4 md:p-12 flex flex-col items-center gap-12 bg-slate-200/50 print:bg-white print:p-0 print:gap-0 print:block print:overflow-visible"
         onClick={handleBackgroundClick}
       >
         
         {formState.pages.length === 0 ? (
-           // Empty State
-           <div className="w-[210mm] h-[297mm] flex flex-col items-center justify-center border-2 border-dashed border-gray-300 bg-white shadow-lg opacity-50 pointer-events-none">
-                <div className="text-center text-gray-400 select-none">
-                    <p className="text-4xl mb-4">📄</p>
-                    <p className="text-lg font-medium">No hay páginas</p>
-                    <p className="text-sm mt-2">Sube imágenes PNG o selecciona una plantilla</p>
+           <div className="flex flex-col items-center justify-center h-full opacity-60">
+                <div className="bg-white p-12 rounded-3xl border-4 border-dashed border-slate-300 flex flex-col items-center max-w-lg text-center shadow-sm">
+                    <div className="bg-blue-50 p-4 rounded-full mb-6 text-blue-500">
+                        <FilePlus size={48} />
+                    </div>
+                    <h2 className="text-2xl font-bold text-slate-700 mb-2">Comienza tu formulario</h2>
+                    <p className="text-slate-500 mb-8">Sube imágenes PNG de tus recetas o selecciona una plantilla predefinida para empezar a editar.</p>
                 </div>
            </div>
         ) : (
-           // Render Pages
            formState.pages.map((page, index) => (
                <div 
                  key={page.id} 
-                 className="relative group/page transition-all duration-200 ease-in-out block"
+                 className="relative group/page transition-all duration-200 ease-in-out block print:w-full"
                >
-                   {/* Page Container with Zoom - Fixed to A4 Width */}
+                   {/* 
+                      Page Container 
+                      En Pantalla: Sombra profunda, bordes, zoom.
+                      En Impresión: Clase 'print-page-container' fuerza el salto de página y resetea estilos.
+                   */}
                    <div
-                     onClick={(e) => {
-                         e.stopPropagation(); // Stop propagation to avoid immediate deselect from background click
-                         handleCanvasClick(e, page.id);
-                     }}
-                     className="relative bg-white shadow-lg a4-page print-page-reset origin-top"
+                     onClick={(e) => { e.stopPropagation(); handleCanvasClick(e, page.id); }}
+                     className="relative bg-white shadow-2xl print-page-container origin-top a4-page ring-1 ring-black/5"
                      style={{
-                        // Scale for screen, Reset for print via class
                         transform: `scale(${zoom})`,
                         marginBottom: `${(zoom - 1) * 100}px`,
-                        cursor: 'crosshair'
+                        cursor: 'text'
                      }}
                    >
-                       <img 
-                           src={page.imageUrl} 
-                           alt={`Página ${index + 1}`} 
-                           className="w-full h-auto select-none pointer-events-none block"
-                       />
+                       <img src={page.imageUrl} alt={`Página ${index + 1}`} className="w-full h-auto select-none pointer-events-none block" />
                        
-                       {/* Elements for this page */}
                        {page.elements.map(el => (
                            <DraggableInput
-                               key={el.id}
-                               element={el}
-                               isSelected={selectedId === el.id}
-                               scale={zoom}
-                               onSelect={setSelectedId}
-                               onChange={handleElementChange}
-                               onDelete={handleElementDelete}
-                               onDuplicate={handleElementDuplicate}
-                               onMouseDown={startDrag}
-                               onRecordHistory={recordHistory}
+                               key={el.id} element={el} isSelected={selectedId === el.id} scale={zoom}
+                               onSelect={setSelectedId} onChange={handleElementChange} onDelete={handleElementDelete}
+                               onDuplicate={handleElementDuplicate} onMouseDown={startDrag} onRecordHistory={recordHistory}
                            />
                        ))}
                    </div>
 
-                   {/* Sidebar Controls (Outside container, visible on hover) */}
-                   <div className="absolute top-0 -right-14 h-full py-2 hidden md:flex flex-col gap-2 no-print">
-                        <div className="bg-gray-800 text-white text-xs font-bold rounded p-1.5 w-8 h-8 flex items-center justify-center shadow-md">
+                   {/* Sidebar Controls (Number & Tools) */}
+                   <div className="absolute top-0 -right-16 h-full py-4 hidden xl:flex flex-col gap-2 no-print" style={{ transform: `scale(${zoom})`, transformOrigin: 'top left' }}>
+                        <div className="bg-slate-700 text-white font-bold rounded-lg w-10 h-10 flex items-center justify-center shadow-lg text-lg">
                             {index + 1}
                         </div>
                         
-                        <div className="flex flex-col gap-1 mt-2 opacity-0 group-hover/page:opacity-100 transition-opacity">
-                            <button 
-                                onClick={() => movePage(index, 'up')}
-                                disabled={index === 0}
-                                className="bg-white text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded p-1.5 w-8 h-8 flex items-center justify-center shadow-md border border-gray-200 disabled:opacity-30 disabled:cursor-not-allowed"
-                                title="Subir página"
-                            >
-                                <ChevronUp size={16} />
+                        <div className="flex flex-col gap-2 mt-2 opacity-0 group-hover/page:opacity-100 transition-all duration-300 translate-x-2 group-hover/page:translate-x-0">
+                            <button onClick={() => movePage(index, 'up')} disabled={index === 0} className="bg-white text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg p-2 shadow-md border border-slate-200 disabled:opacity-50" title="Subir página">
+                                <ChevronUp size={20} />
                             </button>
-                            <button 
-                                onClick={() => movePage(index, 'down')}
-                                disabled={index === formState.pages.length - 1}
-                                className="bg-white text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded p-1.5 w-8 h-8 flex items-center justify-center shadow-md border border-gray-200 disabled:opacity-30 disabled:cursor-not-allowed"
-                                title="Bajar página"
-                            >
-                                <ChevronDown size={16} />
+                            <button onClick={() => movePage(index, 'down')} disabled={index === formState.pages.length - 1} className="bg-white text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg p-2 shadow-md border border-slate-200 disabled:opacity-50" title="Bajar página">
+                                <ChevronDown size={20} />
                             </button>
-                            <div className="h-px bg-gray-300 w-4 mx-auto my-1"></div>
-                            <button 
-                                onClick={() => handleRemovePage(page.id)}
-                                className="bg-white text-red-500 hover:text-red-700 hover:bg-red-50 rounded p-1.5 w-8 h-8 flex items-center justify-center shadow-md border border-gray-200"
-                                title="Eliminar página"
-                            >
-                                <Trash2 size={16} />
+                            <div className="h-px bg-slate-300 w-6 mx-auto my-1"></div>
+                            <button onClick={() => handleRemovePage(page.id)} className="bg-white text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg p-2 shadow-md border border-slate-200 transition-colors" title="Eliminar página">
+                                <Trash2 size={20} />
                             </button>
                         </div>
                    </div>
                    
-                   {/* Mobile Controls */}
-                   <div className="md:hidden flex justify-between items-center bg-gray-200 p-2 text-xs text-gray-600 no-print mt-2 rounded">
-                      <span>Página {index + 1}</span>
-                      <div className="flex gap-2">
-                        <button onClick={() => movePage(index, 'up')} disabled={index === 0} className="p-1 disabled:opacity-30"><ChevronUp size={14}/></button>
-                        <button onClick={() => movePage(index, 'down')} disabled={index === formState.pages.length - 1} className="p-1 disabled:opacity-30"><ChevronDown size={14}/></button>
-                        <button onClick={() => handleRemovePage(page.id)} className="text-red-500 font-bold ml-2">Eliminar</button>
+                   {/* Mobile Label */}
+                   <div className="xl:hidden flex justify-between items-center bg-white border border-slate-200 shadow-sm p-3 text-sm text-slate-600 no-print mt-2 rounded-lg mx-auto w-[210mm] max-w-full">
+                      <span className="font-bold">Página {index + 1}</span>
+                      <div className="flex gap-3">
+                        <button onClick={() => movePage(index, 'up')} disabled={index === 0}><ChevronUp size={18}/></button>
+                        <button onClick={() => movePage(index, 'down')} disabled={index === formState.pages.length - 1}><ChevronDown size={18}/></button>
+                        <button onClick={() => handleRemovePage(page.id)} className="text-red-500 font-medium ml-2">Eliminar</button>
                       </div>
                    </div>
                </div>
@@ -580,11 +446,9 @@ const App: React.FC = () => {
         )}
       </div>
       
-      {/* Footer / Instructions */}
-      <div className="bg-white border-t border-gray-200 p-2 text-center text-xs text-gray-500 no-print">
-        {formState.pages.length > 0 
-            ? `Zoom: ${Math.round(zoom * 100)}% | Haga clic sobre una página para escribir. Arrastre los campos para moverlos. Ctrl+Z para deshacer.` 
-            : "Selecciona una plantilla o sube imágenes PNG para comenzar."}
+      {/* Footer */}
+      <div className="bg-white border-t border-slate-200 p-2 text-center text-xs text-slate-400 no-print font-medium">
+        MediFill &copy; {new Date().getFullYear()} - {formState.pages.length > 0 ? `Zoom: ${Math.round(zoom * 100)}%` : "Listo"}
       </div>
     </div>
   );

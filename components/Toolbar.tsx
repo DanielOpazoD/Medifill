@@ -1,6 +1,6 @@
 
 import React, { useRef } from 'react';
-import { Upload, Printer, Download, FileJson, Type, Bold, Italic, Trash2, RotateCcw, RotateCw, ZoomIn, ZoomOut, LayoutTemplate, Minus, Plus } from 'lucide-react';
+import { Upload, Printer, Download, FileJson, Type, Bold, Italic, Trash2, RotateCcw, RotateCw, ZoomIn, ZoomOut, LayoutTemplate, Minus, Plus, FilePlus } from 'lucide-react';
 import { TextElement } from '../types';
 import { TEMPLATES } from '../templates';
 
@@ -48,7 +48,6 @@ export const Toolbar: React.FC<ToolbarProps> = ({
     if (e.target.files && e.target.files.length > 0) {
       onUpload(e.target.files);
     }
-    // Reset to allow re-uploading same file
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
@@ -66,33 +65,39 @@ export const Toolbar: React.FC<ToolbarProps> = ({
     if (!selectedElement) return;
     const current = selectedElement.lineHeight || 0.9;
     const newValue = Math.max(0.5, Math.min(2.0, current + delta));
-    // Round to 1 decimal place to avoid floating point errors
     onUpdateStyle({ lineHeight: Math.round(newValue * 10) / 10 });
   };
 
   const currentLineHeight = selectedElement?.lineHeight || 0.9;
 
+  // Componente de separador vertical
+  const Divider = () => <div className="h-8 w-px bg-slate-200 mx-2 hidden md:block"></div>;
+
   return (
-    <div className="w-full bg-white border-b border-gray-200 shadow-sm p-4 flex flex-wrap items-center justify-between gap-4 sticky top-0 z-50 no-print">
+    <div className="w-full bg-white/95 backdrop-blur-sm border-b border-slate-200 shadow-sm px-4 py-3 flex flex-wrap items-center justify-between gap-3 sticky top-0 z-50 no-print transition-all">
       
-      {/* Left Group: File Operations */}
+      {/* Brand & File Actions */}
       <div className="flex items-center gap-2">
-        <h1 className="text-xl font-bold text-gray-800 mr-4 flex items-center gap-2">
-          <span className="bg-blue-600 text-white p-1 rounded">MF</span> MediFill
-        </h1>
+        <div className="flex items-center gap-2 mr-4 select-none">
+          <div className="bg-gradient-to-br from-blue-600 to-blue-700 text-white p-1.5 rounded-md shadow-sm">
+            <FilePlus size={18} />
+          </div>
+          <span className="text-lg font-bold text-slate-800 tracking-tight hidden lg:inline">MediFill</span>
+        </div>
         
-        {/* Templates Dropdown */}
+        {/* Templates */}
         <div className="relative group">
-            <button className="flex items-center gap-2 px-3 py-2 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 rounded transition text-sm font-medium border border-indigo-200">
+            <button className="flex items-center gap-2 px-3 py-2 bg-slate-50 text-slate-700 hover:bg-slate-100 hover:text-blue-600 rounded-md transition-all text-sm font-medium border border-slate-200 hover:border-blue-200 shadow-sm">
                 <LayoutTemplate size={16} />
-                <span className="hidden sm:inline">Plantillas</span>
+                <span className="hidden xl:inline">Plantillas</span>
             </button>
-            <div className="absolute top-full left-0 mt-1 w-64 bg-white border border-gray-200 rounded shadow-lg hidden group-hover:block z-50">
+            <div className="absolute top-full left-0 mt-1 w-64 bg-white border border-slate-200 rounded-lg shadow-xl hidden group-hover:block z-50 p-1">
+                <div className="px-3 py-2 text-xs font-semibold text-slate-400 uppercase tracking-wider">Disponibles</div>
                 {TEMPLATES.map(template => (
                   <button 
                       key={template.id}
                       onClick={() => onLoadTemplate(template.id)}
-                      className="w-full text-left px-4 py-2 hover:bg-gray-50 text-sm text-gray-700 border-b border-gray-100 last:border-0"
+                      className="w-full text-left px-3 py-2 hover:bg-blue-50 text-sm text-slate-700 rounded-md transition-colors"
                   >
                       {template.name}
                   </button>
@@ -100,186 +105,119 @@ export const Toolbar: React.FC<ToolbarProps> = ({
             </div>
         </div>
 
-        <div className="h-6 w-px bg-gray-300 mx-1"></div>
-
-        <input
-          type="file"
-          accept="image/png, image/jpeg"
-          multiple
-          className="hidden"
-          ref={fileInputRef}
-          onChange={handleFileChange}
-        />
+        {/* Upload */}
+        <input type="file" accept="image/png, image/jpeg" multiple className="hidden" ref={fileInputRef} onChange={handleFileChange} />
         <button
           onClick={() => fileInputRef.current?.click()}
-          className="flex items-center gap-2 px-3 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition text-sm font-medium"
-          title="Cargar imágenes desde tu PC"
+          className="flex items-center gap-2 px-3 py-2 bg-slate-50 text-slate-700 hover:bg-slate-100 hover:text-blue-600 rounded-md transition-all text-sm font-medium border border-slate-200 hover:border-blue-200 shadow-sm"
+          title="Subir imágenes PNG"
         >
           <Upload size={16} />
-          <span className="hidden md:inline">{hasPages ? "Agregar" : "Subir"}</span>
+          <span className="hidden xl:inline">{hasPages ? "Agregar Pág" : "Subir IMG"}</span>
         </button>
 
         {hasPages && (
             <button
                 onClick={onClear}
-                className="flex items-center gap-2 px-3 py-2 text-red-600 hover:bg-red-50 rounded transition text-sm font-medium border border-transparent hover:border-red-100"
-                title="Borrar todas las páginas"
+                className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"
+                title="Limpiar todo"
             >
-                <RotateCcw size={16} />
+                <Trash2 size={18} />
             </button>
         )}
 
-        <div className="h-6 w-px bg-gray-300 mx-1"></div>
+        <Divider />
 
         {/* Undo/Redo */}
-        <div className="flex bg-gray-100 rounded p-1 gap-1">
-          <button 
-             onClick={onUndo}
-             disabled={!canUndo}
-             className="p-1.5 hover:bg-white hover:shadow-sm rounded text-gray-600 disabled:opacity-30 disabled:cursor-not-allowed"
-             title="Deshacer (Ctrl+Z)"
-          >
+        <div className="flex bg-slate-100 rounded-lg p-0.5 gap-0.5">
+          <button onClick={onUndo} disabled={!canUndo} className="p-1.5 hover:bg-white hover:shadow-sm rounded-md text-slate-600 disabled:opacity-30 transition-all" title="Deshacer">
             <RotateCcw size={16} />
           </button>
-          <button 
-             onClick={onRedo}
-             disabled={!canRedo}
-             className="p-1.5 hover:bg-white hover:shadow-sm rounded text-gray-600 disabled:opacity-30 disabled:cursor-not-allowed"
-             title="Rehacer (Ctrl+Y)"
-          >
+          <button onClick={onRedo} disabled={!canRedo} className="p-1.5 hover:bg-white hover:shadow-sm rounded-md text-slate-600 disabled:opacity-30 transition-all" title="Rehacer">
             <RotateCw size={16} />
           </button>
         </div>
 
-        <div className="h-6 w-px bg-gray-300 mx-1"></div>
-
-        <input
-            type="file"
-            accept=".json"
-            className="hidden"
-            ref={jsonInputRef}
-            onChange={handleImportChange}
-        />
+        <Divider />
         
-        <div className="flex bg-gray-100 rounded p-1 gap-1 ml-2">
-            <button
-            onClick={() => jsonInputRef.current?.click()}
-            className="flex items-center gap-2 px-3 py-1.5 text-gray-700 hover:bg-white hover:shadow-sm rounded transition text-sm"
-            title="Importar indicación guardada"
-            >
-            <FileJson size={16} />
-            <span className="hidden sm:inline">Importar</span>
+        {/* Import/Export */}
+        <div className="flex gap-1">
+            <input type="file" accept=".json" className="hidden" ref={jsonInputRef} onChange={handleImportChange} />
+            <button onClick={() => jsonInputRef.current?.click()} className="p-2 text-slate-600 hover:bg-slate-100 rounded-md transition-colors" title="Importar JSON">
+                <FileJson size={18} />
             </button>
-            <button
-            onClick={onExport}
-            disabled={!hasPages}
-            className="flex items-center gap-2 px-3 py-1.5 text-gray-700 hover:bg-white hover:shadow-sm rounded transition text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-            title="Guardar indicación"
-            >
-            <Download size={16} />
-            <span className="hidden sm:inline">Exportar</span>
+            <button onClick={onExport} disabled={!hasPages} className="p-2 text-slate-600 hover:bg-slate-100 rounded-md transition-colors disabled:opacity-30" title="Guardar JSON">
+                <Download size={18} />
             </button>
         </div>
       </div>
 
-      {/* Middle Group: Zoom & Style */}
-      <div className="flex items-center gap-4">
-        {/* Zoom Controls */}
-        <div className="flex items-center bg-gray-100 rounded p-1 gap-1">
-          <button 
-            onClick={handleZoomOut}
-            className="p-1.5 hover:bg-white hover:shadow-sm rounded text-gray-600 disabled:opacity-30"
-            disabled={zoom <= 0.25}
-            title="Reducir Zoom"
-          >
-            <ZoomOut size={16} />
-          </button>
-          <span className="text-xs font-medium w-12 text-center select-none">
-            {Math.round(zoom * 100)}%
-          </span>
-          <button 
-            onClick={handleZoomIn}
-            className="p-1.5 hover:bg-white hover:shadow-sm rounded text-gray-600 disabled:opacity-30"
-            disabled={zoom >= 3.0}
-            title="Aumentar Zoom"
-          >
-            <ZoomIn size={16} />
-          </button>
-        </div>
-
-        {/* Text Styling (only if selected) */}
-        <div className={`flex items-center gap-3 transition-opacity duration-200 ${selectedElement ? 'opacity-100' : 'opacity-30 pointer-events-none'}`}>
-          <div className="flex items-center gap-1 bg-gray-100 rounded p-1">
+      {/* Center: Style Controls */}
+      <div className={`flex items-center gap-3 transition-all duration-300 ${selectedElement ? 'opacity-100 translate-y-0' : 'opacity-30 translate-y-1 pointer-events-none grayscale'}`}>
+          <div className="flex items-center gap-1 bg-slate-100 rounded-lg p-1 border border-slate-200">
               <button
                   onClick={() => onUpdateStyle({ isBold: !selectedElement?.isBold })}
-                  className={`p-1.5 rounded transition ${selectedElement?.isBold ? 'bg-white shadow text-black' : 'text-gray-500 hover:text-black'}`}
-                  title="Negrita"
+                  className={`p-1.5 rounded-md transition-all ${selectedElement?.isBold ? 'bg-white shadow text-blue-600 font-bold' : 'text-slate-500 hover:text-slate-700'}`}
               >
                   <Bold size={16} />
               </button>
               <button
                   onClick={() => onUpdateStyle({ isItalic: !selectedElement?.isItalic })}
-                  className={`p-1.5 rounded transition ${selectedElement?.isItalic ? 'bg-white shadow text-black' : 'text-gray-500 hover:text-black'}`}
-                  title="Cursiva"
+                  className={`p-1.5 rounded-md transition-all ${selectedElement?.isItalic ? 'bg-white shadow text-blue-600 italic' : 'text-slate-500 hover:text-slate-700'}`}
               >
                   <Italic size={16} />
               </button>
           </div>
 
-          <div className="flex items-center gap-2 bg-gray-100 rounded px-2 py-1">
-              <Type size={16} className="text-gray-500" />
+          <div className="flex items-center gap-2 bg-slate-100 rounded-lg px-2 py-1 border border-slate-200">
+              <Type size={16} className="text-slate-400" />
               <input 
-                  type="number" 
-                  min="8" 
-                  max="72" 
+                  type="number" min="8" max="72" 
                   value={selectedElement?.fontSize || 27}
                   onChange={(e) => onUpdateStyle({ fontSize: parseInt(e.target.value) || 27 })}
-                  className="w-12 bg-transparent text-center text-sm outline-none"
-                  title="Tamaño de fuente"
+                  className="w-10 bg-transparent text-center text-sm font-medium text-slate-700 outline-none"
               />
-              <span className="text-xs text-gray-500">px</span>
+              <span className="text-xs text-slate-400">px</span>
           </div>
 
-          {/* Line Height Control */}
-          <div className="flex items-center gap-1 bg-gray-100 rounded px-2 py-1" title="Interlineado">
-             <button 
-                onClick={() => changeLineHeight(-0.1)}
-                className="p-1 hover:bg-white hover:shadow-sm rounded text-gray-600"
-                disabled={currentLineHeight <= 0.5}
-             >
-                 <Minus size={16} />
+          <div className="flex items-center gap-1 bg-slate-100 rounded-lg px-1 py-1 border border-slate-200" title="Altura de línea">
+             <button onClick={() => changeLineHeight(-0.1)} className="p-1 hover:bg-white hover:text-blue-600 rounded text-slate-500 transition-colors" disabled={currentLineHeight <= 0.5}>
+                 <Minus size={14} />
              </button>
-             <span className="text-xs font-medium w-8 text-center select-none">
+             <span className="text-xs font-semibold w-9 text-center text-slate-700">
                 {Math.round(currentLineHeight * 100)}%
              </span>
-             <button 
-                onClick={() => changeLineHeight(0.1)}
-                className="p-1 hover:bg-white hover:shadow-sm rounded text-gray-600"
-                disabled={currentLineHeight >= 2.0}
-             >
-                 <Plus size={16} />
+             <button onClick={() => changeLineHeight(0.1)} className="p-1 hover:bg-white hover:text-blue-600 rounded text-slate-500 transition-colors" disabled={currentLineHeight >= 2.0}>
+                 <Plus size={14} />
              </button>
           </div>
 
-          <button 
-              onClick={onDeleteSelected}
-              className="p-2 text-red-500 hover:bg-red-50 rounded transition"
-              title="Eliminar texto seleccionado"
-          >
-              <Trash2 size={16} />
+          <button onClick={onDeleteSelected} className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors">
+              <Trash2 size={18} />
           </button>
-        </div>
       </div>
 
-      {/* Right Group: Print */}
-      <div className="flex items-center">
+      {/* Right: Print & Zoom */}
+      <div className="flex items-center gap-4">
+        <div className="flex items-center bg-slate-100 rounded-lg p-0.5 border border-slate-200">
+          <button onClick={handleZoomOut} className="p-1.5 hover:bg-white hover:shadow-sm rounded-md text-slate-600 disabled:opacity-30" disabled={zoom <= 0.25}>
+            <ZoomOut size={16} />
+          </button>
+          <span className="text-xs font-semibold w-10 text-center text-slate-600 select-none">
+            {Math.round(zoom * 100)}%
+          </span>
+          <button onClick={handleZoomIn} className="p-1.5 hover:bg-white hover:shadow-sm rounded-md text-slate-600 disabled:opacity-30" disabled={zoom >= 3.0}>
+            <ZoomIn size={16} />
+          </button>
+        </div>
+
         <button
           onClick={onPrint}
           disabled={!hasPages}
-          className="flex items-center gap-2 px-6 py-2 bg-emerald-600 text-white rounded hover:bg-emerald-700 transition shadow-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+          className="flex items-center gap-2 px-5 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 hover:shadow-md transition-all font-semibold text-sm disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none"
         >
           <Printer size={18} />
-          Imprimir
+          <span className="hidden sm:inline">Imprimir</span>
         </button>
       </div>
     </div>
