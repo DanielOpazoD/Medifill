@@ -247,7 +247,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
                 className="p-1 hover:bg-white hover:shadow-sm rounded text-gray-600"
                 disabled={currentLineHeight <= 0.5}
              >
-                 <Minus size={14} />
+                 <Minus size={16} />
              </button>
              <span className="text-xs font-medium w-8 text-center select-none">
                 {Math.round(currentLineHeight * 100)}%
@@ -257,7 +257,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
                 className="p-1 hover:bg-white hover:shadow-sm rounded text-gray-600"
                 disabled={currentLineHeight >= 2.0}
              >
-                 <Plus size={14} />
+                 <Plus size={16} />
              </button>
           </div>
 

@@ -1,0 +1,2 @@
+Por favor, coloca las imágenes de las plantillas (p1.png y p2.png) en esta carpeta.
+Netlify servirá automáticamente los archivos de esta carpeta (public/templates) en la ruta /templates/nombre_archivo.png.

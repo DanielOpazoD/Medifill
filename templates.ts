@@ -1,11 +1,11 @@
 
 import { TemplateConfig } from './types';
 
-// Coordinates are estimated based on standard layouts. 
-// You can adjust 'x', 'y', 'width', and 'fontSize' to match your specific PNGs perfectly.
+// Las coordenadas son estimadas basadas en diseños estándar. 
+// Puedes ajustar 'x', 'y', 'width', y 'fontSize' para que coincidan con tus PNGs perfectamente.
 
-// NOTE: On Netlify/Vite, files in the 'public' folder are served at the root.
-// If your images are in 'public/templates/', refer to them as '/templates/filename.png'.
+// NOTA: En Netlify/Vite, los archivos en la carpeta 'public' se sirven desde la raíz automáticamente.
+// Si tus imágenes están en 'public/templates/', debes referenciarlas como '/templates/filename.png'.
 
 export const TEMPLATES: TemplateConfig[] = [
   {
