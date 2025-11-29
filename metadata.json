@@ -1,0 +1,5 @@
+{
+  "name": "Copy of MediFill - Rellenador de Formularios Médicos",
+  "description": "Herramienta web para digitalizar y rellenar formularios médicos e indicaciones sobre imágenes PNG, con capacidad de exportación e impresión.",
+  "requestFramePermissions": []
+}
