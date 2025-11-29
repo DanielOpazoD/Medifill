@@ -101,7 +101,7 @@ export const DraggableInput: React.FC<DraggableInputProps> = ({
 
       {/* The Text Input Area */}
       <div className={`relative transition-all duration-200
-        ${isSelected ? 'ring-2 ring-blue-400 ring-offset-1 rounded bg-blue-50/10' : ''}
+        ${isSelected ? 'ring-1 ring-blue-400 ring-offset-0 rounded-sm bg-blue-50/10' : ''}
         ${isPlaceholderMode ? 'border border-dashed border-gray-400 bg-yellow-50/20 hover:bg-yellow-100/40' : 'hover:ring-1 hover:ring-gray-300/50 hover:bg-gray-50/10'}
         print:border-none print:bg-transparent print:ring-0
       `}>
@@ -109,16 +109,15 @@ export const DraggableInput: React.FC<DraggableInputProps> = ({
           ref={textareaRef}
           value={element.text}
           onChange={(e) => onChange(element.id, { text: e.target.value })}
-          className="w-full bg-transparent resize-none outline-none overflow-hidden px-1 py-0.5 block placeholder:text-gray-400/70 print:placeholder:text-transparent"
+          className="w-full bg-transparent resize-none outline-none overflow-hidden px-0.5 py-0 block placeholder:text-gray-400/70 print:placeholder:text-transparent"
           style={{
             fontSize: `${element.fontSize}px`,
             fontWeight: element.isBold ? 'bold' : 'normal',
             fontStyle: element.isItalic ? 'italic' : 'normal',
-            lineHeight: '1.2', // Increased slightly for better breathing room
-            minHeight: '1.2em',
+            lineHeight: '1.1', // Tight line height to match letter size
             fontFamily: 'Arial, sans-serif' // Standard medical form font
           }}
-          placeholder={element.placeholder || (isSelected ? "Escriba..." : "")}
+          placeholder={element.placeholder || (isSelected ? "..." : "")}
           spellCheck={false}
           onFocus={() => {
             setIsEditing(true);
@@ -132,11 +131,11 @@ export const DraggableInput: React.FC<DraggableInputProps> = ({
         {/* Resize Handle */}
         {isSelected && (
           <div
-            className="absolute -right-1.5 bottom-1/2 translate-y-1/2 w-3 h-8 bg-blue-400 rounded-full cursor-e-resize flex items-center justify-center opacity-75 hover:opacity-100 no-print"
+            className="absolute -right-1.5 bottom-1/2 translate-y-1/2 w-3 h-6 bg-blue-400 rounded-full cursor-e-resize flex items-center justify-center opacity-75 hover:opacity-100 no-print shadow-sm"
             onMouseDown={handleResize}
             title="Arrastrar para cambiar ancho"
           >
-            <div className="w-0.5 h-4 bg-white rounded-full" />
+            <div className="w-0.5 h-3 bg-white rounded-full" />
           </div>
         )}
       </div>
