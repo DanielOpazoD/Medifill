@@ -3,6 +3,7 @@ import { Toolbar } from './components/Toolbar';
 import { DraggableInput } from './components/DraggableInput';
 import { TextElement, FormState, Page } from './types';
 import { Trash2, ChevronUp, ChevronDown } from 'lucide-react';
+import { TEMPLATES } from './templates';
 
 // Utility to generate IDs
 const generateId = () => Math.random().toString(36).substr(2, 9);
@@ -64,49 +65,62 @@ const App: React.FC = () => {
     });
   };
 
-  const handleLoadTemplate = async (type: string) => {
+  const handleLoadTemplate = async (templateId: string) => {
+    const selectedTemplate = TEMPLATES.find(t => t.id === templateId);
+    if (!selectedTemplate) return;
+
     if (formState.pages.length > 0) {
         if (!window.confirm("Cargar la plantilla reemplazará las páginas actuales. ¿Deseas continuar?")) {
             return;
         }
     }
 
-    if (type === 'hospitalizado') {
-        setIsLoading(true);
-        try {
-            const files = ['p1.png', 'p2.png'];
-            const newPages: Page[] = [];
+    setIsLoading(true);
+    try {
+        const newPages: Page[] = [];
 
-            for (const filename of files) {
-                // Fetch the file from the public/root directory
-                const response = await fetch(filename);
-                if (!response.ok) throw new Error(`No se encontró el archivo ${filename}`);
-                const blob = await response.blob();
-                
-                // Convert to Base64 to ensure portability
-                const base64 = await new Promise<string>((resolve) => {
-                    const reader = new FileReader();
-                    reader.onloadend = () => resolve(reader.result as string);
-                    reader.readAsDataURL(blob);
-                });
+        for (const pageConfig of selectedTemplate.pages) {
+            // Fetch the file from the public/root directory
+            const response = await fetch(pageConfig.filename);
+            if (!response.ok) throw new Error(`No se encontró el archivo ${pageConfig.filename}`);
+            const blob = await response.blob();
+            
+            // Convert to Base64 to ensure portability
+            const base64 = await new Promise<string>((resolve) => {
+                const reader = new FileReader();
+                reader.onloadend = () => resolve(reader.result as string);
+                reader.readAsDataURL(blob);
+            });
 
-                newPages.push({
-                    id: generateId(),
-                    imageUrl: base64,
-                    elements: []
-                });
-            }
+            // Map predefined elements if any
+            const elements: TextElement[] = (pageConfig.elements || []).map(el => ({
+                id: generateId(),
+                x: el.x || 50,
+                y: el.y || 50,
+                text: el.text || '',
+                fontSize: el.fontSize || 27,
+                isBold: !!el.isBold,
+                isItalic: !!el.isItalic,
+                width: el.width || 200,
+                height: el.height || 30 // Approx height
+            }));
 
-            setFormState({ pages: newPages });
-            setZoom(1); // Reset zoom
-            setSelectedId(null);
-
-        } catch (error) {
-            alert("Error al cargar la plantilla. Asegúrate de que los archivos 'p1.png' y 'p2.png' existan en la carpeta principal del proyecto.");
-            console.error(error);
-        } finally {
-            setIsLoading(false);
+            newPages.push({
+                id: generateId(),
+                imageUrl: base64,
+                elements: elements
+            });
         }
+
+        setFormState({ pages: newPages });
+        setZoom(1); // Reset zoom
+        setSelectedId(null);
+
+    } catch (error) {
+        alert("Error al cargar la plantilla. Asegúrate de que los archivos existan en la carpeta principal del proyecto.");
+        console.error(error);
+    } finally {
+        setIsLoading(false);
     }
   };
 

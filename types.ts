@@ -19,3 +19,14 @@ export interface Page {
 export interface FormState {
   pages: Page[];
 }
+
+export interface TemplatePageConfig {
+  filename: string;
+  elements?: Partial<TextElement>[]; // Predefined elements (x, y, text, width, etc.)
+}
+
+export interface TemplateConfig {
+  id: string;
+  name: string;
+  pages: TemplatePageConfig[];
+}

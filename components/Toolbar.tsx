@@ -1,6 +1,7 @@
 import React, { useRef } from 'react';
 import { Upload, Printer, Download, FileJson, Type, Bold, Italic, Trash2, RotateCcw, ZoomIn, ZoomOut, LayoutTemplate } from 'lucide-react';
 import { TextElement } from '../types';
+import { TEMPLATES } from '../templates';
 
 interface ToolbarProps {
   onUpload: (files: FileList) => void;
@@ -8,7 +9,7 @@ interface ToolbarProps {
   onExport: () => void;
   onImport: (file: File) => void;
   onClear: () => void;
-  onLoadTemplate: (type: string) => void;
+  onLoadTemplate: (templateId: string) => void;
   selectedElement: TextElement | null;
   onUpdateStyle: (style: Partial<TextElement>) => void;
   onDeleteSelected: () => void;
@@ -67,22 +68,16 @@ export const Toolbar: React.FC<ToolbarProps> = ({
                 <LayoutTemplate size={16} />
                 <span className="hidden sm:inline">Plantillas</span>
             </button>
-            <div className="absolute top-full left-0 mt-1 w-56 bg-white border border-gray-200 rounded shadow-lg hidden group-hover:block z-50">
-                <button 
-                    onClick={() => onLoadTemplate('hospitalizado')}
-                    className="w-full text-left px-4 py-2 hover:bg-gray-50 text-sm text-gray-700 border-b border-gray-100"
-                >
-                    Indicaciones Hospitalizado
-                </button>
-                 {/* Future templates can be added here */}
-                {/* 
-                <button 
-                    onClick={() => onLoadTemplate('consentimiento')}
-                    className="w-full text-left px-4 py-2 hover:bg-gray-50 text-sm text-gray-700"
-                >
-                    Consentimiento Informado
-                </button> 
-                */}
+            <div className="absolute top-full left-0 mt-1 w-64 bg-white border border-gray-200 rounded shadow-lg hidden group-hover:block z-50">
+                {TEMPLATES.map(template => (
+                  <button 
+                      key={template.id}
+                      onClick={() => onLoadTemplate(template.id)}
+                      className="w-full text-left px-4 py-2 hover:bg-gray-50 text-sm text-gray-700 border-b border-gray-100 last:border-0"
+                  >
+                      {template.name}
+                  </button>
+                ))}
             </div>
         </div>
 
