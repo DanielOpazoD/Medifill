@@ -1,7 +1,7 @@
 
 import React, { useRef, useEffect, useState } from 'react';
 import { TextElement } from '../types';
-import { GripVertical, Trash2 } from 'lucide-react';
+import { GripVertical, Trash2, Copy } from 'lucide-react';
 
 interface DraggableInputProps {
   element: TextElement;
@@ -10,6 +10,7 @@ interface DraggableInputProps {
   onSelect: (id: string) => void;
   onChange: (id: string, updates: Partial<TextElement>) => void;
   onDelete: (id: string) => void;
+  onDuplicate: (id: string) => void;
   onMouseDown: (e: React.MouseEvent, id: string) => void;
   onRecordHistory: () => void;
 }
@@ -21,6 +22,7 @@ export const DraggableInput: React.FC<DraggableInputProps> = ({
   onSelect,
   onChange,
   onDelete,
+  onDuplicate,
   onMouseDown,
   onRecordHistory
 }) => {
@@ -76,15 +78,38 @@ export const DraggableInput: React.FC<DraggableInputProps> = ({
     >
       {/* Controls - Only visible when selected and NOT printing */}
       {isSelected && (
-        <div className="absolute -top-8 left-0 flex items-center gap-1 bg-white border border-gray-300 rounded shadow-sm px-1 py-0.5 no-print z-50">
+        <div 
+            className="absolute -top-9 flex items-center gap-1 bg-white border border-gray-300 rounded shadow-sm px-1 py-0.5 no-print z-50"
+            style={{
+                left: '16.66%', // Centrado en el primer tercio (33% / 2)
+                transform: 'translateX(-50%)'
+            }}
+        >
            {/* Drag Handle */}
            <div
             className="cursor-move p-1 hover:bg-gray-100 rounded text-gray-500"
             onMouseDown={(e) => onMouseDown(e, element.id)}
+            title="Mover"
           >
             <GripVertical size={14} />
           </div>
-          <div className="h-4 w-px bg-gray-300 mx-1"></div>
+          
+          <div className="h-4 w-px bg-gray-300 mx-0.5"></div>
+          
+          {/* Duplicate Button */}
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onDuplicate(element.id);
+            }}
+            className="p-1 hover:bg-blue-50 text-blue-500 rounded"
+            title="Duplicar (Ctrl+D)"
+          >
+            <Copy size={14} />
+          </button>
+
+          <div className="h-4 w-px bg-gray-300 mx-0.5"></div>
+
           {/* Delete Button */}
           <button
             onClick={(e) => {
@@ -109,20 +134,23 @@ export const DraggableInput: React.FC<DraggableInputProps> = ({
           ref={textareaRef}
           value={element.text}
           onChange={(e) => onChange(element.id, { text: e.target.value })}
-          className="w-full bg-transparent resize-none outline-none overflow-hidden px-0.5 py-0 block placeholder:text-gray-400/70 print:placeholder:text-transparent"
+          className="w-full bg-transparent resize-none outline-none overflow-hidden px-0.5 block placeholder:text-gray-400/70 print:placeholder:text-transparent"
           style={{
             fontSize: `${element.fontSize}px`,
             fontWeight: element.isBold ? 'bold' : 'normal',
             fontStyle: element.isItalic ? 'italic' : 'normal',
-            lineHeight: element.lineHeight || 0.9, // Default to 0.9 if not set
-            fontFamily: 'Arial, sans-serif' // Standard medical form font
+            lineHeight: element.lineHeight || 0.9,
+            // Agregamos padding extra para evitar que se corten ascendentes/descendentes con line-height pequeño
+            paddingTop: '5px', 
+            paddingBottom: '5px',
+            // Aseguramos que la caja tenga al menos la altura de la fuente para mostrar el texto completo
+            minHeight: `${element.fontSize}px`,
+            fontFamily: 'Arial, sans-serif'
           }}
           placeholder={element.placeholder || (isSelected ? "..." : "")}
           spellCheck={false}
           onFocus={() => {
             setIsEditing(true);
-            // We record history on focus so if they change text, we have a save point.
-            // If they don't change anything, undo/redo is harmlessly idempotent.
             onRecordHistory(); 
           }}
           onBlur={() => setIsEditing(false)}

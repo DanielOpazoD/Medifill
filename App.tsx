@@ -22,6 +22,9 @@ const App: React.FC = () => {
   const [zoom, setZoom] = useState<number>(1);
   const [isLoading, setIsLoading] = useState(false);
   
+  // App Preferences
+  const [lastLineHeight, setLastLineHeight] = useState<number>(0.9);
+  
   // Dragging State
   const [dragState, setDragState] = useState<{
     id: string;
@@ -60,23 +63,6 @@ const App: React.FC = () => {
     setSelectedId(null);
   };
 
-  // Keyboard Shortcuts for Undo/Redo
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-        if ((e.metaKey || e.ctrlKey) && e.key === 'z') {
-            e.preventDefault();
-            undo();
-        }
-        if ((e.metaKey || e.ctrlKey) && e.key === 'y') {
-            e.preventDefault();
-            redo();
-        }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [past, future, formState]);
-
-
   // --- Helpers to find elements ---
   const findElementAndPage = (elementId: string) => {
     for (const page of formState.pages) {
@@ -91,6 +77,69 @@ const App: React.FC = () => {
     const result = findElementAndPage(selectedId);
     return result ? result.element : null;
   };
+
+  const handleElementDuplicate = (id: string) => {
+    const result = findElementAndPage(id);
+    if (!result) return;
+    const { element, page } = result;
+
+    recordHistory();
+    const newElement: TextElement = {
+        ...element,
+        id: generateId(),
+        x: element.x + 20, // Offset slightly
+        y: element.y + 20,
+    };
+
+    setFormState(prev => ({
+        pages: prev.pages.map(p => {
+            if (p.id === page.id) {
+                return { ...p, elements: [...p.elements, newElement] };
+            }
+            return p;
+        })
+    }));
+    setSelectedId(newElement.id);
+  };
+
+  // Keyboard Shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+        // Undo / Redo
+        if ((e.metaKey || e.ctrlKey) && e.key === 'z') {
+            e.preventDefault();
+            undo();
+        }
+        if ((e.metaKey || e.ctrlKey) && e.key === 'y') {
+            e.preventDefault();
+            redo();
+        }
+
+        // Duplicate
+        if ((e.metaKey || e.ctrlKey) && e.key === 'd') {
+            e.preventDefault();
+            if (selectedId) {
+                handleElementDuplicate(selectedId);
+            }
+        }
+        
+        // Delete / Backspace
+        if ((e.key === 'Delete' || e.key === 'Backspace') && selectedId) {
+            // Only delete if not typing in a textarea
+            if (document.activeElement?.tagName !== 'TEXTAREA') {
+                handleElementDelete(selectedId);
+            }
+        }
+
+        // Escape
+        if (e.key === 'Escape') {
+            setSelectedId(null);
+        }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [past, future, formState, selectedId]);
+
 
   // --- Handlers for Toolbar ---
 
@@ -157,7 +206,7 @@ const App: React.FC = () => {
                 isItalic: !!el.isItalic,
                 width: el.width || 200,
                 height: el.height || 30, // Approx height
-                lineHeight: el.lineHeight || 0.9
+                lineHeight: el.lineHeight || lastLineHeight
             }));
 
             newPages.push({
@@ -284,7 +333,7 @@ const App: React.FC = () => {
       isItalic: false,
       width: 200,
       height: defaultFontSize,
-      lineHeight: 0.9
+      lineHeight: lastLineHeight // Use stored preference
     };
 
     recordHistory();
@@ -329,6 +378,11 @@ const App: React.FC = () => {
   };
 
   const handleStyleUpdate = (style: Partial<TextElement>) => {
+    // If lineHeight is updated, save it as preference for new boxes
+    if (style.lineHeight !== undefined) {
+        setLastLineHeight(style.lineHeight);
+    }
+
     if (selectedId) {
       recordHistory();
       handleElementChange(selectedId, style);
@@ -387,22 +441,6 @@ const App: React.FC = () => {
     };
   }, [dragState, zoom]);
 
-  // Global Keydown (Esc/Delete)
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        setSelectedId(null);
-      }
-      if ((e.key === 'Delete' || e.key === 'Backspace') && selectedId) {
-          if (document.activeElement?.tagName !== 'TEXTAREA') {
-              handleElementDelete(selectedId);
-          }
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectedId]);
-
 
   return (
     <div className="flex flex-col h-screen w-full bg-gray-50 overflow-hidden">
@@ -438,7 +476,7 @@ const App: React.FC = () => {
 
       {/* Main Workspace - Added click handler for background deselection */}
       <div 
-        className="flex-1 overflow-auto p-4 md:p-8 flex flex-col items-center gap-12 bg-gray-100 print:bg-white print:p-0 print:gap-0"
+        className="flex-1 overflow-auto p-4 md:p-8 flex flex-col items-center gap-12 bg-gray-100 print:bg-white print:p-0 print:gap-0 print:block print:overflow-visible"
         onClick={handleBackgroundClick}
       >
         
@@ -456,7 +494,9 @@ const App: React.FC = () => {
            formState.pages.map((page, index) => (
                <div 
                  key={page.id} 
-                 className="relative group/page print:break-after-page last:print:break-after-auto transition-all duration-200 ease-in-out"
+                 className="relative group/page print:break-after-page last:print:break-after-auto transition-all duration-200 ease-in-out block"
+                 // Force page break after each page container during print
+                 style={{ pageBreakAfter: 'always' }}
                >
                    {/* Page Container with Zoom */}
                    <div
@@ -488,6 +528,7 @@ const App: React.FC = () => {
                                onSelect={setSelectedId}
                                onChange={handleElementChange}
                                onDelete={handleElementDelete}
+                               onDuplicate={handleElementDuplicate}
                                onMouseDown={startDrag}
                                onRecordHistory={recordHistory}
                            />
