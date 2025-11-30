@@ -176,6 +176,9 @@ export const DraggableInput: React.FC<DraggableInputProps> = ({
         value={element.text}
         disabled={isHandMode}
         onChange={(e) => onChange(element.id, { text: e.target.value })}
+        // IMPORTANTE: stopPropagation en onDrop para que el navegador maneje el drop dentro del textarea
+        // en lugar de que lo maneje el contenedor padre (App.tsx) creando un nuevo elemento.
+        onDrop={(e) => e.stopPropagation()}
         className={`w-full bg-transparent outline-none resize-none overflow-hidden
           ${isHandMode ? 'cursor-grab select-none pointer-events-none' : 'cursor-text'}
           ${isFillMode ? 'bg-transparent' : ''}

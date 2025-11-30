@@ -1,4 +1,5 @@
 
+
 export interface TextElement {
   id: string;
   x: number;
@@ -44,6 +45,7 @@ export interface Snippet {
   id: string;
   text: string;
   category: 'general' | 'medicamentos' | 'indicaciones' | 'personal';
+  variants?: string[];
 }
 
 export type ToolType = 'select' | 'hand' | 'text';
