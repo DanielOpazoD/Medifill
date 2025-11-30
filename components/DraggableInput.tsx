@@ -1,4 +1,3 @@
-
 import React, { useRef, useEffect, useState } from 'react';
 import { TextElement, ToolType } from '../types';
 import { GripVertical, Trash2, Copy } from 'lucide-react';
@@ -35,6 +34,7 @@ export const DraggableInput: React.FC<DraggableInputProps> = ({
   useEffect(() => {
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
+      // Ajuste estricto: scrollHeight da la altura exacta del contenido
       textareaRef.current.style.height = textareaRef.current.scrollHeight + 'px';
     }
   }, [element.text, element.fontSize, element.width, element.lineHeight]);
@@ -61,26 +61,24 @@ export const DraggableInput: React.FC<DraggableInputProps> = ({
   };
 
   const isPlaceholderMode = !element.text && !isSelected;
-
-  // En modo 'hand', el cursor cambia y el click no selecciona para editar
   const isHandMode = activeTool === 'hand';
 
+  // Styles for the container
   const containerStyle: React.CSSProperties = {
     left: `${element.x}px`,
     top: `${element.y}px`,
     width: `${element.width}px`,
     transform: 'translate(0, 0)', 
     cursor: isHandMode ? 'grab' : 'text',
-    pointerEvents: activeTool === 'text' ? 'none' : 'auto', // En modo texto, ignorar el cuadro para permitir crear nuevos cerca
-    // Flex para ayudar al centrado si fuera necesario, aunque el textarea hace el trabajo principal
+    pointerEvents: activeTool === 'text' ? 'none' : 'auto', 
     display: 'flex',
     flexDirection: 'column',
-    justifyContent: 'center',
+    justifyContent: 'flex-start', // Align to top to avoid vertical drift
   };
 
   return (
     <div
-      className={`absolute group flex flex-col justify-center ${isSelected ? 'z-50' : 'z-10'}`}
+      className={`absolute group flex flex-col ${isSelected ? 'z-50' : 'z-10'}`}
       style={containerStyle}
       onClick={(e) => {
         e.stopPropagation();
@@ -89,7 +87,6 @@ export const DraggableInput: React.FC<DraggableInputProps> = ({
         }
       }}
       onMouseDown={(e) => {
-        // En modo mano, cualquier click en el contenedor inicia el arrastre
         if (isHandMode) {
           onMouseDown(e, element.id);
         }
@@ -98,10 +95,8 @@ export const DraggableInput: React.FC<DraggableInputProps> = ({
       {/* Controls - Only visible when selected and NOT printing */}
       {isSelected && !isHandMode && (
         <div 
-            className="absolute -top-9 flex items-center gap-1 bg-white border border-gray-300 rounded shadow-sm px-1 py-0.5 no-print z-50"
-            style={{
-                left: '0px', 
-            }}
+            className="absolute -top-9 flex items-center gap-1 bg-white border border-gray-300 rounded shadow-sm px-1 py-0.5 no-print z-50 select-none"
+            style={{ left: '0px' }}
         >
            {/* Drag Handle */}
            <div
@@ -143,15 +138,14 @@ export const DraggableInput: React.FC<DraggableInputProps> = ({
       )}
 
       {/* The Text Input Area */}
-      <div className={`relative transition-all duration-200 flex items-center w-full
-        ${isSelected ? 'ring-1 ring-blue-400 ring-offset-0 bg-blue-50/5' : ''}
+      <div className={`relative transition-all duration-200 w-full
+        ${isSelected ? 'ring-1 ring-blue-400 bg-blue-50/5' : ''}
         ${isPlaceholderMode ? 'border border-dashed border-gray-400 bg-yellow-50/20' : isHandMode ? 'hover:bg-blue-100/10 hover:ring-1 hover:ring-blue-200/50' : 'hover:ring-1 hover:ring-gray-300/50 hover:bg-gray-50/10'}
         print:border-none print:bg-transparent print:ring-0
       `}>
         <textarea
           ref={textareaRef}
           value={element.text}
-          // En modo mano, desactivamos la interacción directa con el textarea para que el evento suba al contenedor
           readOnly={isHandMode} 
           disabled={isHandMode}
           onChange={(e) => onChange(element.id, { text: e.target.value })}
@@ -162,13 +156,16 @@ export const DraggableInput: React.FC<DraggableInputProps> = ({
             fontSize: `${element.fontSize}px`,
             fontWeight: element.isBold ? 'bold' : 'normal',
             fontStyle: element.isItalic ? 'italic' : 'normal',
-            lineHeight: element.lineHeight || 1.0, // Default tight line height
-            padding: 0, // CRITICAL: Remove padding for exact alignment
-            margin: 0,  // CRITICAL: Remove margin
+            // Default line-height set to 1.1 for tight fit without cutting off descenders
+            lineHeight: element.lineHeight || 1.1, 
+            padding: 0, 
+            margin: 0,
             border: 'none',
             fontFamily: 'Arial, sans-serif',
             textAlign: 'left',
             display: 'block',
+            // Ensure no extra whitespace
+            verticalAlign: 'top',
           }}
           placeholder={element.placeholder || (isSelected ? "..." : "")}
           spellCheck={false}

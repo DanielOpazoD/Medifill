@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Toolbar } from './components/Toolbar';
 import { DraggableInput } from './components/DraggableInput';
@@ -24,7 +23,7 @@ const App: React.FC = () => {
   const [activeTool, setActiveTool] = useState<ToolType>('select');
 
   // App Preferences
-  const [lastLineHeight, setLastLineHeight] = useState<number>(1.0);
+  const [lastLineHeight, setLastLineHeight] = useState<number>(1.1); // Default to tight 1.1
   
   // Dragging State
   const [dragState, setDragState] = useState<{
@@ -173,7 +172,7 @@ const App: React.FC = () => {
                 fontSize: el.fontSize || 27,
                 isBold: !!el.isBold,
                 isItalic: !!el.isItalic,
-                width: el.width || 450, // Updated Default width
+                width: el.width || 500, // Updated Default width
                 height: el.height || 30,
                 lineHeight: el.lineHeight || lastLineHeight
             }));
@@ -285,8 +284,8 @@ const App: React.FC = () => {
     
     // Default configuration for new boxes
     const defaultFontSize = 27;
-    // Centering: Subtract half the approximate height (font size) to center on click
-    const adjustedY = y - (defaultFontSize * 0.6);
+    // Centering: Subtract a portion of the font size to center vertically on click
+    const adjustedY = y - (defaultFontSize * 0.5);
 
     const newElement: TextElement = {
       id: generateId(),
@@ -294,7 +293,7 @@ const App: React.FC = () => {
       text: '', 
       fontSize: defaultFontSize,
       isBold: false, isItalic: false,
-      width: 450, // Default much wider as requested
+      width: 500, // Default much wider (500px)
       height: defaultFontSize,
       lineHeight: lastLineHeight
     };
@@ -354,8 +353,7 @@ const App: React.FC = () => {
       startX: e.clientX, startY: e.clientY,
       initialX: element.x, initialY: element.y
     });
-    // If in hand mode, we don't necessarily select it visually for editing, but we track it.
-    // If in pointer mode, we select it.
+    // In hand mode, we track dragging but do NOT select for text editing
     if (activeTool === 'select') {
          setSelectedId(id);
     }
