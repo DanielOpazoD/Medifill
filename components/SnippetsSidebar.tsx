@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Snippet } from '../types';
 import { Plus, X, MessageSquareText, GripHorizontal } from 'lucide-react';
@@ -9,13 +8,21 @@ interface SnippetsSidebarProps {
   onAddSnippetToCanvas: (text: string) => void;
 }
 
-// Lista vacía por defecto como solicitado
-const DEFAULT_SNIPPETS: Snippet[] = [];
+// Updated with specific medical phrases
+const DEFAULT_SNIPPETS: Snippet[] = [
+  { id: 'def-1', text: 'CSV CADA 6 HORAS', category: 'indicaciones' },
+  { id: 'def-2', text: 'CSV CADA 4 HORAS', category: 'indicaciones' },
+  { id: 'def-3', text: 'CSV CADA 8 HORAS', category: 'indicaciones' },
+  { id: 'def-4', text: 'ENOXAPARINA 40 MG/DIA SC', category: 'medicamentos' },
+  { id: 'def-5', text: 'ENOXAPARINA 60 MG/DIA SC', category: 'medicamentos' },
+  { id: 'def-6', text: 'ENOXAPARINA 60 MG CADA 12 HORAS SC', category: 'medicamentos' },
+  { id: 'def-7', text: 'HEPARINA NO FRACCIONADA 5000 UI CADA 12 HORAS', category: 'medicamentos' },
+];
 
 export const SnippetsSidebar: React.FC<SnippetsSidebarProps> = ({ isOpen, onClose, onAddSnippetToCanvas }) => {
   const [snippets, setSnippets] = useState<Snippet[]>(() => {
     const saved = localStorage.getItem('medifill_custom_snippets');
-    return saved ? JSON.parse(saved) : DEFAULT_SNIPPETS;
+    return saved && JSON.parse(saved).length > 0 ? JSON.parse(saved) : DEFAULT_SNIPPETS;
   });
   const [newSnippetText, setNewSnippetText] = useState('');
 

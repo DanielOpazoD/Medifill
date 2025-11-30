@@ -1,12 +1,12 @@
-
 import React, { useRef, useState, useEffect } from 'react';
-import { Upload, Printer, Download, FileJson, Bold, Italic, Trash2, RotateCcw, RotateCw, ZoomIn, ZoomOut, LayoutTemplate, Minus, Plus, FilePlus, Hand, MousePointer2, Type as TypeIcon, CaseUpper, Settings, X, Eraser, PenLine, Eye, ChevronDown, Grid3X3, BookOpen } from 'lucide-react';
+import { Upload, Printer, Download, FileJson, Bold, Italic, Trash2, RotateCcw, RotateCw, ZoomIn, ZoomOut, LayoutTemplate, Minus, Plus, FilePlus, Hand, MousePointer2, Type as TypeIcon, CaseUpper, Settings, X, Eraser, PenLine, Eye, ChevronDown, Grid3X3, BookOpen, FileDown } from 'lucide-react';
 import { TextElement, ToolType, DefaultSettings } from '../types';
 import { TEMPLATES } from '../templates';
 
 interface ToolbarProps {
   onUpload: (files: FileList) => void;
   onPrint: () => void;
+  onDownloadPDF: () => void;
   onExport: () => void;
   onImport: (file: File) => void;
   onClear: () => void;
@@ -38,6 +38,7 @@ interface ToolbarProps {
 export const Toolbar: React.FC<ToolbarProps> = ({
   onUpload,
   onPrint,
+  onDownloadPDF,
   onExport,
   onImport,
   onClear,
@@ -296,17 +297,18 @@ export const Toolbar: React.FC<ToolbarProps> = ({
              >
                 <Grid3X3 size={18} />
              </button>
-
-             {/* Snippets Toggle */}
-             <button
-                onClick={onToggleSnippets}
-                className={`p-1.5 rounded-md transition-all ${showSnippets ? 'bg-purple-100 text-purple-600 ring-1 ring-purple-200' : 'text-slate-500 hover:bg-slate-100'}`}
-                title="Frases Rápidas (Snippets)"
-             >
-                <BookOpen size={18} />
-             </button>
           </>
         )}
+
+        {/* Snippets Toggle (Ahora disponible siempre) */}
+        <button
+            onClick={onToggleSnippets}
+            className={`p-1.5 rounded-md transition-all ml-1 ${showSnippets ? 'bg-purple-100 text-purple-600 ring-1 ring-purple-200' : 'text-slate-500 hover:bg-slate-100'}`}
+            title="Frases Rápidas (Snippets)"
+        >
+            <BookOpen size={18} />
+        </button>
+
       </div>
 
       {/* ================= SECCIÓN CENTRAL: CONTEXTUAL (SOLO SI HAY SELECCIÓN) ================= */}
@@ -457,16 +459,28 @@ export const Toolbar: React.FC<ToolbarProps> = ({
           </button>
         </div>
 
-        {/* Print */}
-        <button
-          onClick={onPrint}
-          disabled={!hasPages}
-          className="flex items-center gap-2 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 hover:shadow-md transition-all font-semibold text-sm disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none ml-2"
-          title="Imprimir documento"
-        >
-          <Printer size={18} />
-          <span className="hidden sm:inline">Imprimir</span>
-        </button>
+        {/* Print Buttons Group */}
+        <div className="flex items-center gap-1 ml-2">
+            {/* Blue: Browser Print */}
+            <button
+            onClick={onPrint}
+            disabled={!hasPages}
+            className="flex items-center justify-center p-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 hover:shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none"
+            title="Impresión rápida (Navegador)"
+            >
+                <Printer size={20} />
+            </button>
+            
+            {/* Red: Native PDF Export */}
+            <button
+            onClick={onDownloadPDF}
+            disabled={!hasPages}
+            className="flex items-center justify-center p-2 bg-red-600 text-white rounded-lg hover:bg-red-700 hover:shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none"
+            title="Exportar a PDF (Calidad exacta)"
+            >
+                <FileDown size={20} />
+            </button>
+        </div>
       </div>
     </div>
   );

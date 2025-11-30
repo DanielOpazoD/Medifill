@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { Toolbar } from './components/Toolbar';
 import { DraggableInput } from './components/DraggableInput';
@@ -6,6 +5,8 @@ import { SnippetsSidebar } from './components/SnippetsSidebar';
 import { TextElement, FormState, Page, ToolType, DefaultSettings } from './types';
 import { Trash2, ChevronUp, ChevronDown, FilePlus, AlertCircle, RefreshCw } from 'lucide-react';
 import { TEMPLATES } from './templates';
+import { jsPDF } from 'jspdf';
+import html2canvas from 'html2canvas';
 
 // Utility to generate IDs
 const generateId = () => Math.random().toString(36).substr(2, 9);
@@ -355,6 +356,51 @@ const App: React.FC = () => {
   const handlePrint = () => {
     setSelectedIds([]);
     setTimeout(() => window.print(), 100);
+  };
+
+  // --- PDF EXPORT FUNCTION ---
+  const handleDownloadPDF = async () => {
+      setIsLoading(true);
+      setSelectedIds([]); // Deselect everything so borders don't show
+      
+      try {
+        const doc = new jsPDF({
+            orientation: 'portrait',
+            unit: 'mm',
+            format: 'a4'
+        });
+
+        const containers = document.querySelectorAll('.print-page-container');
+        
+        for (let i = 0; i < containers.length; i++) {
+            const container = containers[i] as HTMLElement;
+            
+            // Create a canvas from the DOM element
+            const canvas = await html2canvas(container, {
+                scale: 2, // Higher scale for better quality
+                useCORS: true, // Allow cross-origin images
+                logging: false,
+                backgroundColor: '#ffffff'
+            });
+            
+            const imgData = canvas.toDataURL('image/jpeg', 0.95);
+            
+            if (i > 0) {
+                doc.addPage();
+            }
+            
+            // A4 dimensions: 210mm x 297mm
+            doc.addImage(imgData, 'JPEG', 0, 0, 210, 297);
+        }
+
+        doc.save('documento_medico.pdf');
+
+      } catch (error) {
+          console.error("Error generating PDF:", error);
+          alert("Hubo un error al generar el PDF. Intenta imprimir usando la opción normal.");
+      } finally {
+          setIsLoading(false);
+      }
   };
 
   const handleGlobalFontSizeChange = (delta: number) => {
@@ -771,6 +817,7 @@ const App: React.FC = () => {
 
       <Toolbar 
         onUpload={handleUpload} onPrint={handlePrint} onExport={handleExport}
+        onDownloadPDF={handleDownloadPDF}
         onImport={handleImport} onClear={handleClearAll} onLoadTemplate={handleLoadTemplate}
         selectedElements={getSelectedElements()} onUpdateStyle={handleStyleUpdate}
         onDeleteSelected={() => handleElementDelete()}

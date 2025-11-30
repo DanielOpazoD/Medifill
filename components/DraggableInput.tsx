@@ -1,7 +1,6 @@
-
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import { TextElement, ToolType } from '../types';
-import { GripVertical, Trash2, Copy, MoveDiagonal } from 'lucide-react';
+import { GripVertical, Trash2, Copy, MoveDiagonal, Info } from 'lucide-react';
 
 interface DraggableInputProps {
   element: TextElement;
@@ -35,6 +34,7 @@ export const DraggableInput: React.FC<DraggableInputProps> = ({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const isHandMode = activeTool === 'hand';
   const GRID_SIZE = 20;
+  const [showInfo, setShowInfo] = useState(false);
 
   // --- Resizing Logic (Width & Height) ---
   const handleResize = (e: React.MouseEvent) => {
@@ -111,9 +111,9 @@ export const DraggableInput: React.FC<DraggableInputProps> = ({
         }
       }}
     >
-      {/* --- Action Toolbar (Small Version) --- */}
+      {/* --- Action Toolbar (Mini Right) --- */}
       {showToolbar && (
-        <div className="absolute -top-7 left-0 flex items-center gap-0.5 bg-white border border-slate-300 rounded shadow-sm px-1 py-0.5 no-print z-[60]">
+        <div className="absolute -top-7 right-0 flex items-center gap-0.5 bg-white border border-slate-300 rounded shadow-sm px-1 py-0.5 no-print z-[60]">
            {/* Move Handle */}
            <div
             className="cursor-move p-0.5 hover:bg-slate-100 rounded text-slate-500 active:text-blue-600"
@@ -128,11 +128,24 @@ export const DraggableInput: React.FC<DraggableInputProps> = ({
           
           <div className="h-3 w-px bg-slate-200 mx-0.5"></div>
           
-          {/* Dimensions Badge (Tiny) */}
-          <div className="flex items-center gap-0.5 px-0.5 text-[9px] font-mono text-slate-500 select-none cursor-default">
-            <span className="font-bold">{Math.round(element.width)}</span>
-            <span className="text-slate-300">x</span>
-            <span className="font-bold">{Math.round(element.height)}</span>
+          {/* Info / Dimensions Toggle */}
+          <div className="relative">
+              <button 
+                className="p-0.5 hover:bg-blue-50 text-slate-500 hover:text-blue-600 rounded flex items-center justify-center"
+                onMouseEnter={() => setShowInfo(true)}
+                onMouseLeave={() => setShowInfo(false)}
+                onClick={(e) => { e.stopPropagation(); setShowInfo(!showInfo); }}
+                title="Ver dimensiones"
+              >
+                  <Info size={12} />
+              </button>
+              
+              {/* Dimensions Badge (Shown on Hover/Click) */}
+              {showInfo && (
+                  <div className="absolute bottom-full mb-1 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-[9px] font-mono px-1.5 py-0.5 rounded whitespace-nowrap z-[70] shadow-md pointer-events-none">
+                     {Math.round(element.width)}x{Math.round(element.height)}
+                  </div>
+              )}
           </div>
 
           <div className="h-3 w-px bg-slate-200 mx-0.5"></div>
