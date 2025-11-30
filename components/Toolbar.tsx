@@ -1,6 +1,6 @@
 
 import React, { useRef, useState, useEffect } from 'react';
-import { Upload, Printer, Download, FileJson, Type, Bold, Italic, Trash2, RotateCcw, RotateCw, ZoomIn, ZoomOut, LayoutTemplate, Minus, Plus, FilePlus, Hand, MousePointer2, Type as TypeIcon, CaseUpper, Settings, X } from 'lucide-react';
+import { Upload, Printer, Download, FileJson, Bold, Italic, Trash2, RotateCcw, RotateCw, ZoomIn, ZoomOut, LayoutTemplate, Minus, Plus, FilePlus, Hand, MousePointer2, Type as TypeIcon, CaseUpper, Settings, X, Eraser, PenLine, Eye } from 'lucide-react';
 import { TextElement, ToolType, DefaultSettings } from '../types';
 import { TEMPLATES } from '../templates';
 
@@ -11,9 +11,10 @@ interface ToolbarProps {
   onImport: (file: File) => void;
   onClear: () => void;
   onLoadTemplate: (templateId: string) => void;
-  selectedElement: TextElement | null;
+  selectedElements: TextElement[];
   onUpdateStyle: (style: Partial<TextElement>) => void;
   onDeleteSelected: () => void;
+  onClearTextSelected: () => void; // New prop
   hasPages: boolean;
   zoom: number;
   onZoomChange: (zoom: number) => void;
@@ -26,6 +27,8 @@ interface ToolbarProps {
   onGlobalFontSizeChange: (delta: number) => void;
   defaultSettings: DefaultSettings;
   onUpdateDefaultSettings: (settings: DefaultSettings) => void;
+  isFillMode: boolean;
+  onToggleFillMode: () => void;
 }
 
 export const Toolbar: React.FC<ToolbarProps> = ({
@@ -35,9 +38,10 @@ export const Toolbar: React.FC<ToolbarProps> = ({
   onImport,
   onClear,
   onLoadTemplate,
-  selectedElement,
+  selectedElements,
   onUpdateStyle,
   onDeleteSelected,
+  onClearTextSelected,
   hasPages,
   zoom,
   onZoomChange,
@@ -49,7 +53,9 @@ export const Toolbar: React.FC<ToolbarProps> = ({
   onToolChange,
   onGlobalFontSizeChange,
   defaultSettings,
-  onUpdateDefaultSettings
+  onUpdateDefaultSettings,
+  isFillMode,
+  onToggleFillMode
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const jsonInputRef = useRef<HTMLInputElement>(null);
@@ -91,14 +97,23 @@ export const Toolbar: React.FC<ToolbarProps> = ({
   const handleZoomIn = () => onZoomChange(Math.min(zoom + 0.1, 3.0));
   const handleZoomOut = () => onZoomChange(Math.max(zoom - 0.1, 0.25));
 
+  // Determine values from selection (if multiple, use the first one or a placeholder)
+  const firstSelected = selectedElements[0];
+  const isMultiple = selectedElements.length > 1;
+  const currentFontSize = firstSelected ? firstSelected.fontSize : defaultSettings.fontSize;
+  const currentLineHeight = firstSelected?.lineHeight || 1.0;
+  
+  // Handlers for manual inputs (Width/Height/Font)
+  const handleManualResize = (dim: 'width' | 'height', val: number) => {
+      onUpdateStyle({ [dim]: val });
+  };
+
   const changeLineHeight = (delta: number) => {
-    if (!selectedElement) return;
-    const current = selectedElement.lineHeight || 1.0;
+    if (selectedElements.length === 0) return;
+    const current = firstSelected.lineHeight || 1.0;
     const newValue = Math.max(0.5, Math.min(2.0, current + delta));
     onUpdateStyle({ lineHeight: Math.round(newValue * 10) / 10 });
   };
-
-  const currentLineHeight = selectedElement?.lineHeight || 1.0;
 
   // Componente de separador vertical
   const Divider = () => <div className="h-8 w-px bg-slate-200 mx-1 hidden md:block"></div>;
@@ -114,218 +129,276 @@ export const Toolbar: React.FC<ToolbarProps> = ({
           </div>
           <span className="text-lg font-bold text-slate-800 tracking-tight hidden 2xl:inline">MediFill</span>
         </div>
-        
-        {/* Templates */}
-        <div className="relative" ref={templateMenuRef}>
-            <button 
-                onClick={() => setIsTemplateMenuOpen(!isTemplateMenuOpen)}
-                className={`flex items-center gap-1 px-2 py-1.5 bg-slate-50 text-slate-700 hover:bg-slate-100 hover:text-blue-600 rounded-md transition-all text-sm font-medium border border-slate-200 hover:border-blue-200 shadow-sm ${isTemplateMenuOpen ? 'bg-slate-100 text-blue-600 ring-2 ring-blue-100 border-blue-300' : ''}`}
-            >
-                <LayoutTemplate size={16} />
-                <span className="hidden xl:inline">Plantillas</span>
-            </button>
-            
-            {isTemplateMenuOpen && (
-                <div className="absolute top-full left-0 mt-1 w-64 bg-white border border-slate-200 rounded-lg shadow-xl z-50 p-1 animate-in fade-in zoom-in-95 duration-100">
-                    <div className="px-3 py-2 text-xs font-semibold text-slate-400 uppercase tracking-wider">Disponibles</div>
-                    {TEMPLATES.map(template => (
-                      <button 
-                          key={template.id}
-                          onClick={() => {
-                              onLoadTemplate(template.id);
-                              setIsTemplateMenuOpen(false); // Cerrar menú al seleccionar
-                          }}
-                          className="w-full text-left px-3 py-2 hover:bg-blue-50 text-sm text-slate-700 rounded-md transition-colors"
-                      >
-                          {template.name}
-                      </button>
-                    ))}
-                </div>
-            )}
-        </div>
 
-        {/* Default Settings (New) */}
-        <div className="relative" ref={settingsRef}>
-            <button
-                onClick={() => setIsSettingsOpen(!isSettingsOpen)}
-                className={`p-1.5 rounded-md transition-all ${isSettingsOpen ? 'bg-slate-200 text-slate-800' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-700'}`}
-                title="Configuración de nuevos cuadros"
-            >
-                <Settings size={18} />
-            </button>
-            {isSettingsOpen && (
-                 <div className="absolute top-full left-0 mt-1 w-72 bg-white border border-slate-200 rounded-lg shadow-xl z-50 p-4 animate-in fade-in zoom-in-95 duration-100">
-                     <div className="flex justify-between items-center mb-3">
-                         <h3 className="text-sm font-bold text-slate-700">Configuración por defecto</h3>
-                         <button onClick={() => setIsSettingsOpen(false)} className="text-slate-400 hover:text-slate-600"><X size={14}/></button>
-                     </div>
-                     <p className="text-xs text-slate-500 mb-3">Valores para nuevos cuadros de texto:</p>
-                     
-                     <div className="space-y-3">
-                         <div className="grid grid-cols-2 gap-2">
-                             <div>
-                                 <label className="text-xs font-semibold text-slate-600 block mb-1">Ancho (px)</label>
-                                 <input 
-                                    type="number" 
-                                    value={defaultSettings.width}
-                                    onChange={(e) => onUpdateDefaultSettings({...defaultSettings, width: parseInt(e.target.value) || 100})}
-                                    className="w-full border border-slate-300 rounded px-2 py-1 text-sm"
-                                 />
-                             </div>
-                             <div>
-                                 <label className="text-xs font-semibold text-slate-600 block mb-1">Alto (px)</label>
-                                 <input 
-                                    type="number" 
-                                    value={defaultSettings.height}
-                                    onChange={(e) => onUpdateDefaultSettings({...defaultSettings, height: parseInt(e.target.value) || 20})}
-                                    className="w-full border border-slate-300 rounded px-2 py-1 text-sm"
-                                 />
-                             </div>
-                         </div>
-                         <div>
-                             <label className="text-xs font-semibold text-slate-600 block mb-1">Tamaño letra (px)</label>
-                             <input 
-                                type="number" 
-                                value={defaultSettings.fontSize}
-                                onChange={(e) => onUpdateDefaultSettings({...defaultSettings, fontSize: parseInt(e.target.value) || 12})}
-                                className="w-full border border-slate-300 rounded px-2 py-1 text-sm"
-                             />
-                         </div>
-                     </div>
-                 </div>
-            )}
-        </div>
-
-        {/* Upload */}
-        <input type="file" accept="image/png, image/jpeg" multiple className="hidden" ref={fileInputRef} onChange={handleFileChange} />
-        <button
-          onClick={() => fileInputRef.current?.click()}
-          className="flex items-center gap-1 px-2 py-1.5 bg-slate-50 text-slate-700 hover:bg-slate-100 hover:text-blue-600 rounded-md transition-all text-sm font-medium border border-slate-200 hover:border-blue-200 shadow-sm"
-          title="Subir imágenes PNG"
+        {/* --- FILL MODE TOGGLE --- */}
+        <button 
+             onClick={onToggleFillMode}
+             className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold transition-all shadow-sm border ${
+                 isFillMode 
+                 ? 'bg-green-100 text-green-700 border-green-300 ring-2 ring-green-100' 
+                 : 'bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200'
+             }`}
+             title={isFillMode ? "Volver a modo edición" : "Cambiar a modo solo rellenar"}
         >
-          <Upload size={16} />
-          <span className="hidden xl:inline">{hasPages ? "Pág" : "Subir IMG"}</span>
+            {isFillMode ? <PenLine size={14} /> : <Eye size={14} />}
+            {isFillMode ? "MODO RELLENAR" : "MODO EDICIÓN"}
         </button>
 
-        {hasPages && (
+        {!isFillMode && (
+        <>
+            {/* Templates */}
+            <div className="relative" ref={templateMenuRef}>
+                <button 
+                    onClick={() => setIsTemplateMenuOpen(!isTemplateMenuOpen)}
+                    className={`flex items-center gap-1 px-2 py-1.5 bg-slate-50 text-slate-700 hover:bg-slate-100 hover:text-blue-600 rounded-md transition-all text-sm font-medium border border-slate-200 hover:border-blue-200 shadow-sm ${isTemplateMenuOpen ? 'bg-slate-100 text-blue-600 ring-2 ring-blue-100 border-blue-300' : ''}`}
+                >
+                    <LayoutTemplate size={16} />
+                    <span className="hidden xl:inline">Plantillas</span>
+                </button>
+                
+                {isTemplateMenuOpen && (
+                    <div className="absolute top-full left-0 mt-1 w-64 bg-white border border-slate-200 rounded-lg shadow-xl z-50 p-1 animate-in fade-in zoom-in-95 duration-100">
+                        <div className="px-3 py-2 text-xs font-semibold text-slate-400 uppercase tracking-wider">Disponibles</div>
+                        {TEMPLATES.map(template => (
+                        <button 
+                            key={template.id}
+                            onClick={() => {
+                                onLoadTemplate(template.id);
+                                setIsTemplateMenuOpen(false);
+                            }}
+                            className="w-full text-left px-3 py-2 hover:bg-blue-50 text-sm text-slate-700 rounded-md transition-colors"
+                        >
+                            {template.name}
+                        </button>
+                        ))}
+                    </div>
+                )}
+            </div>
+
+            {/* Default Settings */}
+            <div className="relative" ref={settingsRef}>
+                <button
+                    onClick={() => setIsSettingsOpen(!isSettingsOpen)}
+                    className={`p-1.5 rounded-md transition-all ${isSettingsOpen ? 'bg-slate-200 text-slate-800' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-700'}`}
+                    title="Configuración de nuevos cuadros"
+                >
+                    <Settings size={18} />
+                </button>
+                {isSettingsOpen && (
+                    <div className="absolute top-full left-0 mt-1 w-72 bg-white border border-slate-200 rounded-lg shadow-xl z-50 p-4 animate-in fade-in zoom-in-95 duration-100">
+                        <div className="flex justify-between items-center mb-3">
+                            <h3 className="text-sm font-bold text-slate-700">Configuración por defecto</h3>
+                            <button onClick={() => setIsSettingsOpen(false)} className="text-slate-400 hover:text-slate-600"><X size={14}/></button>
+                        </div>
+                        <p className="text-xs text-slate-500 mb-3">Valores para nuevos cuadros de texto:</p>
+                        
+                        <div className="space-y-3">
+                            <div className="grid grid-cols-2 gap-2">
+                                <div>
+                                    <label className="text-xs font-semibold text-slate-600 block mb-1">Ancho (px)</label>
+                                    <input 
+                                        type="number" 
+                                        value={defaultSettings.width}
+                                        onChange={(e) => onUpdateDefaultSettings({...defaultSettings, width: parseInt(e.target.value) || 100})}
+                                        className="w-full border border-slate-300 rounded px-2 py-1 text-sm"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="text-xs font-semibold text-slate-600 block mb-1">Alto (px)</label>
+                                    <input 
+                                        type="number" 
+                                        value={defaultSettings.height}
+                                        onChange={(e) => onUpdateDefaultSettings({...defaultSettings, height: parseInt(e.target.value) || 20})}
+                                        className="w-full border border-slate-300 rounded px-2 py-1 text-sm"
+                                    />
+                                </div>
+                            </div>
+                            <div>
+                                <label className="text-xs font-semibold text-slate-600 block mb-1">Tamaño letra (px)</label>
+                                <input 
+                                    type="number" 
+                                    value={defaultSettings.fontSize}
+                                    onChange={(e) => onUpdateDefaultSettings({...defaultSettings, fontSize: parseInt(e.target.value) || 12})}
+                                    className="w-full border border-slate-300 rounded px-2 py-1 text-sm"
+                                />
+                            </div>
+                        </div>
+                    </div>
+                )}
+            </div>
+
+            {/* Upload */}
+            <input type="file" accept="image/png, image/jpeg" multiple className="hidden" ref={fileInputRef} onChange={handleFileChange} />
             <button
-                onClick={onClear}
-                className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"
-                title="Limpiar todo"
+                onClick={() => fileInputRef.current?.click()}
+                className="flex items-center gap-1 px-2 py-1.5 bg-slate-50 text-slate-700 hover:bg-slate-100 hover:text-blue-600 rounded-md transition-all text-sm font-medium border border-slate-200 hover:border-blue-200 shadow-sm"
+                title="Subir imágenes PNG"
             >
-                <Trash2 size={16} />
+                <Upload size={16} />
+                <span className="hidden xl:inline">{hasPages ? "Pág" : "Subir IMG"}</span>
             </button>
+
+            {hasPages && (
+                <button
+                    onClick={onClear}
+                    className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"
+                    title="Limpiar todo (Borrar páginas)"
+                >
+                    <Trash2 size={16} />
+                </button>
+            )}
+
+            <Divider />
+
+            {/* Tools */}
+            <div className="flex bg-slate-100 rounded-lg p-0.5 gap-0.5 border border-slate-200">
+            <button 
+                onClick={() => onToolChange('select')} 
+                className={`p-1.5 rounded-md transition-all flex items-center gap-1 ${activeTool === 'select' ? 'bg-white shadow text-blue-600' : 'text-slate-500 hover:text-slate-700'}`}
+                title="Selección (Arrastra para seleccionar varios)"
+            >
+                <MousePointer2 size={16} />
+            </button>
+            <button 
+                onClick={() => onToolChange('hand')} 
+                className={`p-1.5 rounded-md transition-all flex items-center gap-1 ${activeTool === 'hand' ? 'bg-white shadow text-blue-600' : 'text-slate-500 hover:text-slate-700'}`}
+                title="Mano (Mover lienzo)"
+            >
+                <Hand size={16} />
+            </button>
+            <button 
+                onClick={() => onToolChange('text')} 
+                className={`p-1.5 rounded-md transition-all flex items-center gap-1 ${activeTool === 'text' ? 'bg-white shadow text-blue-600' : 'text-slate-500 hover:text-slate-700'}`}
+                title="Texto (Crear cuadros)"
+            >
+                <TypeIcon size={16} />
+                <span className="text-xs font-bold hidden sm:inline">Texto</span>
+            </button>
+            </div>
+
+            <Divider />
+
+            {/* Undo/Redo */}
+            <div className="flex bg-slate-100 rounded-lg p-0.5 gap-0.5">
+            <button onClick={onUndo} disabled={!canUndo} className="p-1.5 hover:bg-white hover:shadow-sm rounded-md text-slate-600 disabled:opacity-30 transition-all">
+                <RotateCcw size={16} />
+            </button>
+            <button onClick={onRedo} disabled={!canRedo} className="p-1.5 hover:bg-white hover:shadow-sm rounded-md text-slate-600 disabled:opacity-30 transition-all">
+                <RotateCw size={16} />
+            </button>
+            </div>
+            
+            {/* Global Font Size */}
+            <div className="flex items-center gap-1 bg-yellow-50 rounded-lg px-1 py-0.5 border border-yellow-200 ml-1" title="Cambiar tamaño de letra a TODO el documento">
+                <div className="text-yellow-600 p-1"><CaseUpper size={14} /></div>
+                <button onClick={() => onGlobalFontSizeChange(-2)} className="p-1 hover:bg-white hover:text-yellow-700 rounded text-yellow-600 transition-colors">
+                    <Minus size={12} />
+                </button>
+                <span className="text-[10px] font-bold text-yellow-700 uppercase leading-none px-1">Global</span>
+                <button onClick={() => onGlobalFontSizeChange(2)} className="p-1 hover:bg-white hover:text-yellow-700 rounded text-yellow-600 transition-colors">
+                    <Plus size={12} />
+                </button>
+            </div>
+        </>
         )}
-
-        <Divider />
-
-        {/* Tools */}
-         <div className="flex bg-slate-100 rounded-lg p-0.5 gap-0.5 border border-slate-200">
-          <button 
-            onClick={() => onToolChange('select')} 
-            className={`p-1.5 rounded-md transition-all flex items-center gap-1 ${activeTool === 'select' ? 'bg-white shadow text-blue-600' : 'text-slate-500 hover:text-slate-700'}`}
-            title="Herramienta Selección"
-          >
-            <MousePointer2 size={16} />
-          </button>
-          <button 
-            onClick={() => onToolChange('hand')} 
-            className={`p-1.5 rounded-md transition-all flex items-center gap-1 ${activeTool === 'hand' ? 'bg-white shadow text-blue-600' : 'text-slate-500 hover:text-slate-700'}`}
-            title="Herramienta Mano (Mover cuadros)"
-          >
-            <Hand size={16} />
-          </button>
-          <button 
-            onClick={() => onToolChange('text')} 
-            className={`p-1.5 rounded-md transition-all flex items-center gap-1 ${activeTool === 'text' ? 'bg-white shadow text-blue-600' : 'text-slate-500 hover:text-slate-700'}`}
-            title="Herramienta Texto (Crear)"
-          >
-            <TypeIcon size={16} />
-            <span className="text-xs font-bold hidden sm:inline">Texto</span>
-          </button>
-        </div>
-
-        <Divider />
-
-        {/* Undo/Redo */}
-        <div className="flex bg-slate-100 rounded-lg p-0.5 gap-0.5">
-          <button onClick={onUndo} disabled={!canUndo} className="p-1.5 hover:bg-white hover:shadow-sm rounded-md text-slate-600 disabled:opacity-30 transition-all">
-            <RotateCcw size={16} />
-          </button>
-          <button onClick={onRedo} disabled={!canRedo} className="p-1.5 hover:bg-white hover:shadow-sm rounded-md text-slate-600 disabled:opacity-30 transition-all">
-            <RotateCw size={16} />
-          </button>
-        </div>
-        
-        {/* Global Font Size */}
-        <div className="flex items-center gap-1 bg-yellow-50 rounded-lg px-1 py-0.5 border border-yellow-200 ml-1" title="Cambiar tamaño de letra a TODO el documento">
-            <div className="text-yellow-600 p-1"><CaseUpper size={14} /></div>
-             <button onClick={() => onGlobalFontSizeChange(-2)} className="p-1 hover:bg-white hover:text-yellow-700 rounded text-yellow-600 transition-colors">
-                 <Minus size={12} />
-             </button>
-             <span className="text-[10px] font-bold text-yellow-700 uppercase leading-none px-1">Global</span>
-             <button onClick={() => onGlobalFontSizeChange(2)} className="p-1 hover:bg-white hover:text-yellow-700 rounded text-yellow-600 transition-colors">
-                 <Plus size={12} />
-             </button>
-        </div>
 
         <Divider />
         
         {/* Import/Export */}
         <div className="flex gap-1">
             <input type="file" accept=".json" className="hidden" ref={jsonInputRef} onChange={handleImportChange} />
-            <button onClick={() => jsonInputRef.current?.click()} className="p-1.5 text-slate-600 hover:bg-slate-100 rounded-md transition-colors" title="Importar JSON">
-                <FileJson size={18} />
-            </button>
+            {!isFillMode && (
+                <button onClick={() => jsonInputRef.current?.click()} className="p-1.5 text-slate-600 hover:bg-slate-100 rounded-md transition-colors" title="Importar JSON">
+                    <FileJson size={18} />
+                </button>
+            )}
             <button onClick={onExport} disabled={!hasPages} className="p-1.5 text-slate-600 hover:bg-slate-100 rounded-md transition-colors disabled:opacity-30" title="Guardar JSON">
                 <Download size={18} />
             </button>
         </div>
       </div>
 
-      {/* Center: Style Controls */}
-      <div className={`flex items-center gap-2 transition-all duration-300 ${selectedElement ? 'opacity-100 translate-y-0' : 'opacity-30 translate-y-1 pointer-events-none grayscale'}`}>
-          <div className="flex items-center gap-1 bg-slate-100 rounded-lg p-0.5 border border-slate-200">
-              <button
-                  onClick={() => onUpdateStyle({ isBold: !selectedElement?.isBold })}
-                  className={`p-1.5 rounded-md transition-all ${selectedElement?.isBold ? 'bg-white shadow text-blue-600 font-bold' : 'text-slate-500 hover:text-slate-700'}`}
+      {/* Center: Style Controls (VISIBLE IF ELEMENTS SELECTED OR EDIT MODE) */}
+      {!isFillMode && selectedElements.length > 0 && (
+          <div className="flex items-center gap-2 animate-in fade-in slide-in-from-top-2 duration-200">
+             
+              {/* Manual Dimensions for Multi-select */}
+              <div className="flex items-center gap-1 bg-slate-100 rounded-lg p-1 border border-slate-200 text-xs text-slate-600">
+                    <span className="font-bold px-1">{isMultiple ? 'Multi' : ''}</span>
+                    <input 
+                        type="number" 
+                        placeholder="W"
+                        value={isMultiple ? '' : Math.round(firstSelected?.width || 0)}
+                        onChange={(e) => handleManualResize('width', parseInt(e.target.value))}
+                        className="w-10 bg-white border border-slate-300 rounded px-1 py-0.5 text-center"
+                        title="Ancho"
+                    />
+                    <span>x</span>
+                    <input 
+                        type="number" 
+                        placeholder="H"
+                        value={isMultiple ? '' : Math.round(firstSelected?.height || 0)}
+                        onChange={(e) => handleManualResize('height', parseInt(e.target.value))}
+                        className="w-10 bg-white border border-slate-300 rounded px-1 py-0.5 text-center"
+                        title="Alto"
+                    />
+              </div>
+
+              <div className="flex items-center gap-1 bg-slate-100 rounded-lg p-0.5 border border-slate-200">
+                  <button
+                      onClick={() => onUpdateStyle({ isBold: !firstSelected?.isBold })}
+                      className={`p-1.5 rounded-md transition-all ${firstSelected?.isBold ? 'bg-white shadow text-blue-600 font-bold' : 'text-slate-500 hover:text-slate-700'}`}
+                      title="Negrita"
+                  >
+                      <Bold size={16} />
+                  </button>
+                  <button
+                      onClick={() => onUpdateStyle({ isItalic: !firstSelected?.isItalic })}
+                      className={`p-1.5 rounded-md transition-all ${firstSelected?.isItalic ? 'bg-white shadow text-blue-600 italic' : 'text-slate-500 hover:text-slate-700'}`}
+                      title="Cursiva"
+                  >
+                      <Italic size={16} />
+                  </button>
+              </div>
+
+              <div className="flex items-center gap-1 bg-slate-100 rounded-lg px-2 py-1 border border-slate-200">
+                  <TypeIcon size={16} className="text-slate-400" />
+                  <input 
+                      type="number" min="8" max="72" 
+                      value={currentFontSize}
+                      onChange={(e) => onUpdateStyle({ fontSize: parseInt(e.target.value) || 27 })}
+                      className="w-8 bg-transparent text-center text-sm font-medium text-slate-700 outline-none"
+                      title="Tamaño de letra"
+                  />
+              </div>
+
+              <div className="flex items-center gap-1 bg-slate-100 rounded-lg px-1 py-1 border border-slate-200" title="Altura de línea">
+                <button onClick={() => changeLineHeight(-0.1)} className="p-1 hover:bg-white hover:text-blue-600 rounded text-slate-500 transition-colors" disabled={currentLineHeight <= 0.5}>
+                    <Minus size={14} />
+                </button>
+                <span className="text-xs font-semibold w-8 text-center text-slate-700">
+                    {Math.round(currentLineHeight * 100)}%
+                </span>
+                <button onClick={() => changeLineHeight(0.1)} className="p-1 hover:bg-white hover:text-blue-600 rounded text-slate-500 transition-colors" disabled={currentLineHeight >= 2.0}>
+                    <Plus size={14} />
+                </button>
+              </div>
+
+              {/* Clear Text Only */}
+              <button 
+                onClick={onClearTextSelected} 
+                className="p-2 text-orange-400 hover:text-orange-600 hover:bg-orange-50 rounded-md transition-colors"
+                title="Borrar SOLO texto (Mantener cuadros)"
               >
-                  <Bold size={16} />
+                  <Eraser size={16} />
               </button>
-              <button
-                  onClick={() => onUpdateStyle({ isItalic: !selectedElement?.isItalic })}
-                  className={`p-1.5 rounded-md transition-all ${selectedElement?.isItalic ? 'bg-white shadow text-blue-600 italic' : 'text-slate-500 hover:text-slate-700'}`}
-              >
-                  <Italic size={16} />
+
+              {/* Delete Elements */}
+              <button onClick={onDeleteSelected} className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors" title="Eliminar cuadro(s)">
+                  <Trash2 size={16} />
               </button>
           </div>
-
-          <div className="flex items-center gap-1 bg-slate-100 rounded-lg px-2 py-1 border border-slate-200">
-              <Type size={16} className="text-slate-400" />
-              <input 
-                  type="number" min="8" max="72" 
-                  value={selectedElement?.fontSize || 27}
-                  onChange={(e) => onUpdateStyle({ fontSize: parseInt(e.target.value) || 27 })}
-                  className="w-8 bg-transparent text-center text-sm font-medium text-slate-700 outline-none"
-              />
-          </div>
-
-          <div className="flex items-center gap-1 bg-slate-100 rounded-lg px-1 py-1 border border-slate-200" title="Altura de línea">
-             <button onClick={() => changeLineHeight(-0.1)} className="p-1 hover:bg-white hover:text-blue-600 rounded text-slate-500 transition-colors" disabled={currentLineHeight <= 0.5}>
-                 <Minus size={14} />
-             </button>
-             <span className="text-xs font-semibold w-8 text-center text-slate-700">
-                {Math.round(currentLineHeight * 100)}%
-             </span>
-             <button onClick={() => changeLineHeight(0.1)} className="p-1 hover:bg-white hover:text-blue-600 rounded text-slate-500 transition-colors" disabled={currentLineHeight >= 2.0}>
-                 <Plus size={14} />
-             </button>
-          </div>
-
-          <button onClick={onDeleteSelected} className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors">
-              <Trash2 size={16} />
-          </button>
-      </div>
+      )}
 
       {/* Right: Print & Zoom */}
       <div className="flex items-center gap-2">

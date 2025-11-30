@@ -1,18 +1,20 @@
-import React, { useRef, useEffect } from 'react';
+
+import React, { useRef } from 'react';
 import { TextElement, ToolType } from '../types';
-import { GripVertical, Trash2, Copy, MoveDiagonal, Ruler } from 'lucide-react';
+import { GripVertical, Trash2, Copy, MoveDiagonal } from 'lucide-react';
 
 interface DraggableInputProps {
   element: TextElement;
   isSelected: boolean;
   scale: number;
   activeTool: ToolType;
-  onSelect: (id: string) => void;
+  onSelect: (id: string, multi: boolean) => void;
   onChange: (id: string, updates: Partial<TextElement>) => void;
   onDelete: (id: string) => void;
   onDuplicate: (id: string) => void;
   onMouseDown: (e: React.MouseEvent, id: string) => void;
   onRecordHistory: () => void;
+  isFillMode: boolean;
 }
 
 export const DraggableInput: React.FC<DraggableInputProps> = ({
@@ -25,7 +27,8 @@ export const DraggableInput: React.FC<DraggableInputProps> = ({
   onDelete,
   onDuplicate,
   onMouseDown,
-  onRecordHistory
+  onRecordHistory,
+  isFillMode
 }) => {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const isHandMode = activeTool === 'hand';
@@ -64,9 +67,6 @@ export const DraggableInput: React.FC<DraggableInputProps> = ({
   };
 
   // --- Style Definitions ---
-  
-  // The outer container determines position and size.
-  // It uses Flexbox to vertically CENTER the text content.
   const containerStyle: React.CSSProperties = {
     left: `${element.x}px`,
     top: `${element.y}px`,
@@ -77,73 +77,74 @@ export const DraggableInput: React.FC<DraggableInputProps> = ({
     alignItems: 'center', // VERTICAL CENTERING
     justifyContent: 'flex-start',
     zIndex: isSelected ? 50 : 10,
-    cursor: isHandMode ? 'grab' : 'text',
+    cursor: isFillMode ? 'text' : (isHandMode ? 'grab' : 'text'),
     pointerEvents: 'auto',
   };
+
+  const showToolbar = isSelected && !isHandMode && !isFillMode;
 
   return (
     <div
       className={`group absolute 
-        ${isSelected ? 'border-2 border-blue-600 z-50' : 'border-2 border-dashed border-blue-300/70 hover:border-blue-400 z-10'}
+        ${isSelected && !isFillMode ? 'border-2 border-blue-600 z-50' : ''}
+        ${!isSelected && !isFillMode ? 'border border-dashed border-slate-300 hover:border-blue-300 z-10' : ''}
+        ${isFillMode ? 'border-none z-10' : ''}
         print:border-none transition-colors
       `}
       style={containerStyle}
       onClick={(e) => {
         e.stopPropagation();
-        if (!isHandMode) onSelect(element.id);
+        if (!isHandMode) onSelect(element.id, e.shiftKey);
       }}
       onMouseDown={(e) => {
-        // If in hand mode, or clicking the border (not text), we drag
-        if (isHandMode) {
-           onMouseDown(e, element.id);
+        if (!isFillMode) {
+             // If clicking border or in hand mode
+             onMouseDown(e, element.id);
         }
       }}
     >
-      {/* --- Action Toolbar (Move, Copy, Delete, Dimensions) --- */}
-      {/* Visible only when selected and NOT printing */}
-      {isSelected && !isHandMode && (
-        <div className="absolute -top-9 left-0 flex items-center gap-1 bg-white border border-slate-300 rounded shadow-lg px-2 py-1 no-print z-[60]">
+      {/* --- Action Toolbar (Small Version) --- */}
+      {showToolbar && (
+        <div className="absolute -top-7 left-0 flex items-center gap-0.5 bg-white border border-slate-300 rounded shadow-sm px-1 py-0.5 no-print z-[60]">
            {/* Move Handle */}
            <div
-            className="cursor-move p-1 hover:bg-slate-100 rounded text-slate-600 active:text-blue-600"
+            className="cursor-move p-0.5 hover:bg-slate-100 rounded text-slate-500 active:text-blue-600"
             onMouseDown={(e) => {
                 e.stopPropagation(); 
                 onMouseDown(e, element.id);
             }}
             title="Mover"
           >
-            <GripVertical size={16} />
+            <GripVertical size={12} />
           </div>
           
-          <div className="h-4 w-px bg-slate-200"></div>
+          <div className="h-3 w-px bg-slate-200 mx-0.5"></div>
           
-          {/* Dimensions Badge */}
-          <div className="flex items-center gap-1 px-1 text-[10px] font-mono text-slate-500 select-none cursor-default" title="Dimensiones actuales">
+          {/* Dimensions Badge (Tiny) */}
+          <div className="flex items-center gap-0.5 px-0.5 text-[9px] font-mono text-slate-500 select-none cursor-default">
             <span className="font-bold">{Math.round(element.width)}</span>
             <span className="text-slate-300">x</span>
             <span className="font-bold">{Math.round(element.height)}</span>
           </div>
 
-          <div className="h-4 w-px bg-slate-200"></div>
+          <div className="h-3 w-px bg-slate-200 mx-0.5"></div>
           
           {/* Duplicate */}
           <button
             onClick={(e) => { e.stopPropagation(); onDuplicate(element.id); }}
-            className="p-1 hover:bg-blue-50 text-slate-600 hover:text-blue-600 rounded"
+            className="p-0.5 hover:bg-blue-50 text-slate-500 hover:text-blue-600 rounded"
             title="Duplicar"
           >
-            <Copy size={16} />
+            <Copy size={12} />
           </button>
-          
-          <div className="h-4 w-px bg-slate-200"></div>
           
           {/* Delete */}
           <button
             onClick={(e) => { e.stopPropagation(); onDelete(element.id); }}
-            className="p-1 hover:bg-red-50 text-slate-600 hover:text-red-600 rounded"
+            className="p-0.5 hover:bg-red-50 text-slate-500 hover:text-red-600 rounded"
             title="Eliminar"
           >
-            <Trash2 size={16} />
+            <Trash2 size={12} />
           </button>
         </div>
       )}
@@ -156,6 +157,7 @@ export const DraggableInput: React.FC<DraggableInputProps> = ({
         onChange={(e) => onChange(element.id, { text: e.target.value })}
         className={`w-full bg-transparent outline-none resize-none overflow-hidden
           ${isHandMode ? 'cursor-grab select-none pointer-events-none' : 'cursor-text'}
+          ${isFillMode ? 'bg-transparent' : ''}
         `}
         style={{
           fontSize: `${element.fontSize}px`,
@@ -168,7 +170,6 @@ export const DraggableInput: React.FC<DraggableInputProps> = ({
           padding: 0,
           margin: 0,
           border: 'none',
-          // Crucial for vertical centering in flex container:
           height: 'auto', 
           maxHeight: '100%'
         }}
@@ -178,13 +179,13 @@ export const DraggableInput: React.FC<DraggableInputProps> = ({
       />
 
       {/* --- Resize Handle (Bottom Right Corner) --- */}
-      {isSelected && !isHandMode && (
+      {showToolbar && (
         <div
-          className="absolute -bottom-2 -right-2 w-6 h-6 bg-white border border-blue-500 rounded-full shadow cursor-nwse-resize flex items-center justify-center z-50 no-print hover:bg-blue-50"
+          className="absolute -bottom-1.5 -right-1.5 w-4 h-4 bg-white border border-blue-500 rounded-full shadow cursor-nwse-resize flex items-center justify-center z-50 no-print hover:bg-blue-50"
           onMouseDown={handleResize}
-          title="Redimensionar (Ancho y Alto)"
+          title="Redimensionar"
         >
-          <MoveDiagonal size={14} className="text-blue-600" />
+          <MoveDiagonal size={10} className="text-blue-600" />
         </div>
       )}
     </div>
