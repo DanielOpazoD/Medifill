@@ -33,3 +33,5 @@ export interface TemplateConfig {
   name: string;
   pages: TemplatePageConfig[];
 }
+
+export type ToolType = 'select' | 'hand' | 'text';

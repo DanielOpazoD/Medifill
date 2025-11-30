@@ -1,12 +1,13 @@
 
 import React, { useRef, useEffect, useState } from 'react';
-import { TextElement } from '../types';
+import { TextElement, ToolType } from '../types';
 import { GripVertical, Trash2, Copy } from 'lucide-react';
 
 interface DraggableInputProps {
   element: TextElement;
   isSelected: boolean;
   scale: number;
+  activeTool: ToolType;
   onSelect: (id: string) => void;
   onChange: (id: string, updates: Partial<TextElement>) => void;
   onDelete: (id: string) => void;
@@ -19,6 +20,7 @@ export const DraggableInput: React.FC<DraggableInputProps> = ({
   element,
   isSelected,
   scale,
+  activeTool,
   onSelect,
   onChange,
   onDelete,
@@ -29,7 +31,7 @@ export const DraggableInput: React.FC<DraggableInputProps> = ({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [isEditing, setIsEditing] = useState(false);
 
-  // Auto-resize height based on content
+  // Auto-resize height based on content to ensure no white space
   useEffect(() => {
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
@@ -39,7 +41,6 @@ export const DraggableInput: React.FC<DraggableInputProps> = ({
 
   const handleResize = (e: React.MouseEvent) => {
     e.stopPropagation();
-    // Record history before resize starts
     onRecordHistory();
     
     const startX = e.clientX;
@@ -59,30 +60,47 @@ export const DraggableInput: React.FC<DraggableInputProps> = ({
     document.addEventListener('mouseup', onMouseUp);
   };
 
-  // Determine if we should show the "empty field" visual cue
   const isPlaceholderMode = !element.text && !isSelected;
+
+  // En modo 'hand', el cursor cambia y el click no selecciona para editar
+  const isHandMode = activeTool === 'hand';
+
+  const containerStyle: React.CSSProperties = {
+    left: `${element.x}px`,
+    top: `${element.y}px`,
+    width: `${element.width}px`,
+    transform: 'translate(0, 0)', 
+    cursor: isHandMode ? 'grab' : 'text',
+    pointerEvents: activeTool === 'text' ? 'none' : 'auto', // En modo texto, ignorar el cuadro para permitir crear nuevos cerca
+    // Flex para ayudar al centrado si fuera necesario, aunque el textarea hace el trabajo principal
+    display: 'flex',
+    flexDirection: 'column',
+    justifyContent: 'center',
+  };
 
   return (
     <div
-      className={`absolute group ${isSelected ? 'z-50' : 'z-10'}`}
-      style={{
-        left: `${element.x}px`,
-        top: `${element.y}px`,
-        width: `${element.width}px`,
-        transform: 'translate(0, 0)', // Fix for some rendering contexts
-      }}
+      className={`absolute group flex flex-col justify-center ${isSelected ? 'z-50' : 'z-10'}`}
+      style={containerStyle}
       onClick={(e) => {
         e.stopPropagation();
-        onSelect(element.id);
+        if (!isHandMode) {
+           onSelect(element.id);
+        }
+      }}
+      onMouseDown={(e) => {
+        // En modo mano, cualquier click en el contenedor inicia el arrastre
+        if (isHandMode) {
+          onMouseDown(e, element.id);
+        }
       }}
     >
       {/* Controls - Only visible when selected and NOT printing */}
-      {isSelected && (
+      {isSelected && !isHandMode && (
         <div 
             className="absolute -top-9 flex items-center gap-1 bg-white border border-gray-300 rounded shadow-sm px-1 py-0.5 no-print z-50"
             style={{
-                left: '16.66%', // Centrado en el primer tercio (33% / 2)
-                transform: 'translateX(-50%)'
+                left: '0px', 
             }}
         >
            {/* Drag Handle */}
@@ -125,41 +143,48 @@ export const DraggableInput: React.FC<DraggableInputProps> = ({
       )}
 
       {/* The Text Input Area */}
-      <div className={`relative transition-all duration-200
-        ${isSelected ? 'ring-1 ring-blue-400 ring-offset-0 rounded-sm bg-blue-50/10' : ''}
-        ${isPlaceholderMode ? 'border border-dashed border-gray-400 bg-yellow-50/20 hover:bg-yellow-100/40' : 'hover:ring-1 hover:ring-gray-300/50 hover:bg-gray-50/10'}
+      <div className={`relative transition-all duration-200 flex items-center w-full
+        ${isSelected ? 'ring-1 ring-blue-400 ring-offset-0 bg-blue-50/5' : ''}
+        ${isPlaceholderMode ? 'border border-dashed border-gray-400 bg-yellow-50/20' : isHandMode ? 'hover:bg-blue-100/10 hover:ring-1 hover:ring-blue-200/50' : 'hover:ring-1 hover:ring-gray-300/50 hover:bg-gray-50/10'}
         print:border-none print:bg-transparent print:ring-0
       `}>
         <textarea
           ref={textareaRef}
           value={element.text}
+          // En modo mano, desactivamos la interacción directa con el textarea para que el evento suba al contenedor
+          readOnly={isHandMode} 
+          disabled={isHandMode}
           onChange={(e) => onChange(element.id, { text: e.target.value })}
-          className="w-full bg-transparent resize-none outline-none overflow-hidden px-0.5 block placeholder:text-gray-400/70 print:placeholder:text-transparent"
+          className={`w-full bg-transparent resize-none outline-none overflow-hidden block placeholder:text-gray-400/70 print:placeholder:text-transparent
+             ${isHandMode ? 'cursor-grab pointer-events-none select-none' : 'cursor-text'}
+          `}
           style={{
             fontSize: `${element.fontSize}px`,
             fontWeight: element.isBold ? 'bold' : 'normal',
             fontStyle: element.isItalic ? 'italic' : 'normal',
-            lineHeight: element.lineHeight || 0.9,
-            // Agregamos padding extra para evitar que se corten ascendentes/descendentes con line-height pequeño
-            paddingTop: '5px', 
-            paddingBottom: '5px',
-            // Aseguramos que la caja tenga al menos la altura de la fuente para mostrar el texto completo
-            minHeight: `${element.fontSize}px`,
-            fontFamily: 'Arial, sans-serif'
+            lineHeight: element.lineHeight || 1.0, // Default tight line height
+            padding: 0, // CRITICAL: Remove padding for exact alignment
+            margin: 0,  // CRITICAL: Remove margin
+            border: 'none',
+            fontFamily: 'Arial, sans-serif',
+            textAlign: 'left',
+            display: 'block',
           }}
           placeholder={element.placeholder || (isSelected ? "..." : "")}
           spellCheck={false}
           onFocus={() => {
-            setIsEditing(true);
-            onRecordHistory(); 
+            if (!isHandMode) {
+                setIsEditing(true);
+                onRecordHistory();
+            }
           }}
           onBlur={() => setIsEditing(false)}
         />
         
         {/* Resize Handle */}
-        {isSelected && (
+        {isSelected && !isHandMode && (
           <div
-            className="absolute -right-1.5 bottom-1/2 translate-y-1/2 w-3 h-6 bg-blue-400 rounded-full cursor-e-resize flex items-center justify-center opacity-75 hover:opacity-100 no-print shadow-sm"
+            className="absolute -right-1.5 bottom-1/2 translate-y-1/2 w-3 h-6 bg-blue-400 rounded-full cursor-e-resize flex items-center justify-center opacity-75 hover:opacity-100 no-print shadow-sm z-50"
             onMouseDown={handleResize}
             title="Arrastrar para cambiar ancho"
           >

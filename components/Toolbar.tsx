@@ -1,7 +1,7 @@
 
 import React, { useRef } from 'react';
-import { Upload, Printer, Download, FileJson, Type, Bold, Italic, Trash2, RotateCcw, RotateCw, ZoomIn, ZoomOut, LayoutTemplate, Minus, Plus, FilePlus } from 'lucide-react';
-import { TextElement } from '../types';
+import { Upload, Printer, Download, FileJson, Type, Bold, Italic, Trash2, RotateCcw, RotateCw, ZoomIn, ZoomOut, LayoutTemplate, Minus, Plus, FilePlus, Hand, MousePointer2, Type as TypeIcon, CaseUpper } from 'lucide-react';
+import { TextElement, ToolType } from '../types';
 import { TEMPLATES } from '../templates';
 
 interface ToolbarProps {
@@ -21,6 +21,9 @@ interface ToolbarProps {
   onRedo: () => void;
   canUndo: boolean;
   canRedo: boolean;
+  activeTool: ToolType;
+  onToolChange: (tool: ToolType) => void;
+  onGlobalFontSizeChange: (delta: number) => void;
 }
 
 export const Toolbar: React.FC<ToolbarProps> = ({
@@ -39,7 +42,10 @@ export const Toolbar: React.FC<ToolbarProps> = ({
   onUndo,
   onRedo,
   canUndo,
-  canRedo
+  canRedo,
+  activeTool,
+  onToolChange,
+  onGlobalFontSizeChange
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const jsonInputRef = useRef<HTMLInputElement>(null);
@@ -63,31 +69,31 @@ export const Toolbar: React.FC<ToolbarProps> = ({
 
   const changeLineHeight = (delta: number) => {
     if (!selectedElement) return;
-    const current = selectedElement.lineHeight || 0.9;
+    const current = selectedElement.lineHeight || 1.0;
     const newValue = Math.max(0.5, Math.min(2.0, current + delta));
     onUpdateStyle({ lineHeight: Math.round(newValue * 10) / 10 });
   };
 
-  const currentLineHeight = selectedElement?.lineHeight || 0.9;
+  const currentLineHeight = selectedElement?.lineHeight || 1.0;
 
   // Componente de separador vertical
-  const Divider = () => <div className="h-8 w-px bg-slate-200 mx-2 hidden md:block"></div>;
+  const Divider = () => <div className="h-8 w-px bg-slate-200 mx-1 hidden md:block"></div>;
 
   return (
-    <div className="w-full bg-white/95 backdrop-blur-sm border-b border-slate-200 shadow-sm px-4 py-3 flex flex-wrap items-center justify-between gap-3 sticky top-0 z-50 no-print transition-all">
+    <div className="w-full bg-white/95 backdrop-blur-sm border-b border-slate-200 shadow-sm px-2 py-2 flex flex-wrap items-center justify-between gap-2 sticky top-0 z-50 no-print transition-all">
       
       {/* Brand & File Actions */}
       <div className="flex items-center gap-2">
-        <div className="flex items-center gap-2 mr-4 select-none">
+        <div className="flex items-center gap-2 mr-2 select-none">
           <div className="bg-gradient-to-br from-blue-600 to-blue-700 text-white p-1.5 rounded-md shadow-sm">
             <FilePlus size={18} />
           </div>
-          <span className="text-lg font-bold text-slate-800 tracking-tight hidden lg:inline">MediFill</span>
+          <span className="text-lg font-bold text-slate-800 tracking-tight hidden 2xl:inline">MediFill</span>
         </div>
         
         {/* Templates */}
         <div className="relative group">
-            <button className="flex items-center gap-2 px-3 py-2 bg-slate-50 text-slate-700 hover:bg-slate-100 hover:text-blue-600 rounded-md transition-all text-sm font-medium border border-slate-200 hover:border-blue-200 shadow-sm">
+            <button className="flex items-center gap-1 px-2 py-1.5 bg-slate-50 text-slate-700 hover:bg-slate-100 hover:text-blue-600 rounded-md transition-all text-sm font-medium border border-slate-200 hover:border-blue-200 shadow-sm">
                 <LayoutTemplate size={16} />
                 <span className="hidden xl:inline">Plantillas</span>
             </button>
@@ -109,33 +115,73 @@ export const Toolbar: React.FC<ToolbarProps> = ({
         <input type="file" accept="image/png, image/jpeg" multiple className="hidden" ref={fileInputRef} onChange={handleFileChange} />
         <button
           onClick={() => fileInputRef.current?.click()}
-          className="flex items-center gap-2 px-3 py-2 bg-slate-50 text-slate-700 hover:bg-slate-100 hover:text-blue-600 rounded-md transition-all text-sm font-medium border border-slate-200 hover:border-blue-200 shadow-sm"
+          className="flex items-center gap-1 px-2 py-1.5 bg-slate-50 text-slate-700 hover:bg-slate-100 hover:text-blue-600 rounded-md transition-all text-sm font-medium border border-slate-200 hover:border-blue-200 shadow-sm"
           title="Subir imágenes PNG"
         >
           <Upload size={16} />
-          <span className="hidden xl:inline">{hasPages ? "Agregar Pág" : "Subir IMG"}</span>
+          <span className="hidden xl:inline">{hasPages ? "Pág" : "Subir IMG"}</span>
         </button>
 
         {hasPages && (
             <button
                 onClick={onClear}
-                className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"
+                className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"
                 title="Limpiar todo"
             >
-                <Trash2 size={18} />
+                <Trash2 size={16} />
             </button>
         )}
 
         <Divider />
 
+        {/* Tools */}
+         <div className="flex bg-slate-100 rounded-lg p-0.5 gap-0.5 border border-slate-200">
+          <button 
+            onClick={() => onToolChange('select')} 
+            className={`p-1.5 rounded-md transition-all flex items-center gap-1 ${activeTool === 'select' ? 'bg-white shadow text-blue-600' : 'text-slate-500 hover:text-slate-700'}`}
+            title="Herramienta Selección"
+          >
+            <MousePointer2 size={16} />
+          </button>
+          <button 
+            onClick={() => onToolChange('hand')} 
+            className={`p-1.5 rounded-md transition-all flex items-center gap-1 ${activeTool === 'hand' ? 'bg-white shadow text-blue-600' : 'text-slate-500 hover:text-slate-700'}`}
+            title="Herramienta Mano (Mover cuadros)"
+          >
+            <Hand size={16} />
+          </button>
+          <button 
+            onClick={() => onToolChange('text')} 
+            className={`p-1.5 rounded-md transition-all flex items-center gap-1 ${activeTool === 'text' ? 'bg-white shadow text-blue-600' : 'text-slate-500 hover:text-slate-700'}`}
+            title="Herramienta Texto (Crear)"
+          >
+            <TypeIcon size={16} />
+            <span className="text-xs font-bold hidden sm:inline">Texto</span>
+          </button>
+        </div>
+
+        <Divider />
+
         {/* Undo/Redo */}
         <div className="flex bg-slate-100 rounded-lg p-0.5 gap-0.5">
-          <button onClick={onUndo} disabled={!canUndo} className="p-1.5 hover:bg-white hover:shadow-sm rounded-md text-slate-600 disabled:opacity-30 transition-all" title="Deshacer">
+          <button onClick={onUndo} disabled={!canUndo} className="p-1.5 hover:bg-white hover:shadow-sm rounded-md text-slate-600 disabled:opacity-30 transition-all">
             <RotateCcw size={16} />
           </button>
-          <button onClick={onRedo} disabled={!canRedo} className="p-1.5 hover:bg-white hover:shadow-sm rounded-md text-slate-600 disabled:opacity-30 transition-all" title="Rehacer">
+          <button onClick={onRedo} disabled={!canRedo} className="p-1.5 hover:bg-white hover:shadow-sm rounded-md text-slate-600 disabled:opacity-30 transition-all">
             <RotateCw size={16} />
           </button>
+        </div>
+        
+        {/* Global Font Size */}
+        <div className="flex items-center gap-1 bg-yellow-50 rounded-lg px-1 py-0.5 border border-yellow-200 ml-1" title="Cambiar tamaño de letra a TODO el documento">
+            <div className="text-yellow-600 p-1"><CaseUpper size={14} /></div>
+             <button onClick={() => onGlobalFontSizeChange(-2)} className="p-1 hover:bg-white hover:text-yellow-700 rounded text-yellow-600 transition-colors">
+                 <Minus size={12} />
+             </button>
+             <span className="text-[10px] font-bold text-yellow-700 uppercase leading-none px-1">Global</span>
+             <button onClick={() => onGlobalFontSizeChange(2)} className="p-1 hover:bg-white hover:text-yellow-700 rounded text-yellow-600 transition-colors">
+                 <Plus size={12} />
+             </button>
         </div>
 
         <Divider />
@@ -143,18 +189,18 @@ export const Toolbar: React.FC<ToolbarProps> = ({
         {/* Import/Export */}
         <div className="flex gap-1">
             <input type="file" accept=".json" className="hidden" ref={jsonInputRef} onChange={handleImportChange} />
-            <button onClick={() => jsonInputRef.current?.click()} className="p-2 text-slate-600 hover:bg-slate-100 rounded-md transition-colors" title="Importar JSON">
+            <button onClick={() => jsonInputRef.current?.click()} className="p-1.5 text-slate-600 hover:bg-slate-100 rounded-md transition-colors" title="Importar JSON">
                 <FileJson size={18} />
             </button>
-            <button onClick={onExport} disabled={!hasPages} className="p-2 text-slate-600 hover:bg-slate-100 rounded-md transition-colors disabled:opacity-30" title="Guardar JSON">
+            <button onClick={onExport} disabled={!hasPages} className="p-1.5 text-slate-600 hover:bg-slate-100 rounded-md transition-colors disabled:opacity-30" title="Guardar JSON">
                 <Download size={18} />
             </button>
         </div>
       </div>
 
       {/* Center: Style Controls */}
-      <div className={`flex items-center gap-3 transition-all duration-300 ${selectedElement ? 'opacity-100 translate-y-0' : 'opacity-30 translate-y-1 pointer-events-none grayscale'}`}>
-          <div className="flex items-center gap-1 bg-slate-100 rounded-lg p-1 border border-slate-200">
+      <div className={`flex items-center gap-2 transition-all duration-300 ${selectedElement ? 'opacity-100 translate-y-0' : 'opacity-30 translate-y-1 pointer-events-none grayscale'}`}>
+          <div className="flex items-center gap-1 bg-slate-100 rounded-lg p-0.5 border border-slate-200">
               <button
                   onClick={() => onUpdateStyle({ isBold: !selectedElement?.isBold })}
                   className={`p-1.5 rounded-md transition-all ${selectedElement?.isBold ? 'bg-white shadow text-blue-600 font-bold' : 'text-slate-500 hover:text-slate-700'}`}
@@ -169,22 +215,21 @@ export const Toolbar: React.FC<ToolbarProps> = ({
               </button>
           </div>
 
-          <div className="flex items-center gap-2 bg-slate-100 rounded-lg px-2 py-1 border border-slate-200">
+          <div className="flex items-center gap-1 bg-slate-100 rounded-lg px-2 py-1 border border-slate-200">
               <Type size={16} className="text-slate-400" />
               <input 
                   type="number" min="8" max="72" 
                   value={selectedElement?.fontSize || 27}
                   onChange={(e) => onUpdateStyle({ fontSize: parseInt(e.target.value) || 27 })}
-                  className="w-10 bg-transparent text-center text-sm font-medium text-slate-700 outline-none"
+                  className="w-8 bg-transparent text-center text-sm font-medium text-slate-700 outline-none"
               />
-              <span className="text-xs text-slate-400">px</span>
           </div>
 
           <div className="flex items-center gap-1 bg-slate-100 rounded-lg px-1 py-1 border border-slate-200" title="Altura de línea">
              <button onClick={() => changeLineHeight(-0.1)} className="p-1 hover:bg-white hover:text-blue-600 rounded text-slate-500 transition-colors" disabled={currentLineHeight <= 0.5}>
                  <Minus size={14} />
              </button>
-             <span className="text-xs font-semibold w-9 text-center text-slate-700">
+             <span className="text-xs font-semibold w-8 text-center text-slate-700">
                 {Math.round(currentLineHeight * 100)}%
              </span>
              <button onClick={() => changeLineHeight(0.1)} className="p-1 hover:bg-white hover:text-blue-600 rounded text-slate-500 transition-colors" disabled={currentLineHeight >= 2.0}>
@@ -193,12 +238,12 @@ export const Toolbar: React.FC<ToolbarProps> = ({
           </div>
 
           <button onClick={onDeleteSelected} className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors">
-              <Trash2 size={18} />
+              <Trash2 size={16} />
           </button>
       </div>
 
       {/* Right: Print & Zoom */}
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-2">
         <div className="flex items-center bg-slate-100 rounded-lg p-0.5 border border-slate-200">
           <button onClick={handleZoomOut} className="p-1.5 hover:bg-white hover:shadow-sm rounded-md text-slate-600 disabled:opacity-30" disabled={zoom <= 0.25}>
             <ZoomOut size={16} />
@@ -214,7 +259,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
         <button
           onClick={onPrint}
           disabled={!hasPages}
-          className="flex items-center gap-2 px-5 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 hover:shadow-md transition-all font-semibold text-sm disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none"
+          className="flex items-center gap-2 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 hover:shadow-md transition-all font-semibold text-sm disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none"
         >
           <Printer size={18} />
           <span className="hidden sm:inline">Imprimir</span>

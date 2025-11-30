@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Toolbar } from './components/Toolbar';
 import { DraggableInput } from './components/DraggableInput';
-import { TextElement, FormState, Page } from './types';
+import { TextElement, FormState, Page, ToolType } from './types';
 import { Trash2, ChevronUp, ChevronDown, FilePlus } from 'lucide-react';
 import { TEMPLATES } from './templates';
 
@@ -17,11 +17,14 @@ const App: React.FC = () => {
   const [future, setFuture] = useState<FormState[]>([]);
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [zoom, setZoom] = useState<number>(0.9); // Zoom inicial un poco más pequeño para ver la hoja mejor
+  const [zoom, setZoom] = useState<number>(0.9);
   const [isLoading, setIsLoading] = useState(false);
   
+  // Tools
+  const [activeTool, setActiveTool] = useState<ToolType>('select');
+
   // App Preferences
-  const [lastLineHeight, setLastLineHeight] = useState<number>(0.9);
+  const [lastLineHeight, setLastLineHeight] = useState<number>(1.0);
   
   // Dragging State
   const [dragState, setDragState] = useState<{
@@ -110,11 +113,14 @@ const App: React.FC = () => {
         if ((e.key === 'Delete' || e.key === 'Backspace') && selectedId) {
             if (document.activeElement?.tagName !== 'TEXTAREA') handleElementDelete(selectedId);
         }
-        if (e.key === 'Escape') setSelectedId(null);
+        if (e.key === 'Escape') {
+            setSelectedId(null);
+            if (activeTool === 'text') setActiveTool('select');
+        }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [past, future, formState, selectedId]);
+  }, [past, future, formState, selectedId, activeTool]);
 
 
   // --- Handlers for Toolbar ---
@@ -167,7 +173,7 @@ const App: React.FC = () => {
                 fontSize: el.fontSize || 27,
                 isBold: !!el.isBold,
                 isItalic: !!el.isItalic,
-                width: el.width || 200,
+                width: el.width || 450, // Updated Default width
                 height: el.height || 30,
                 lineHeight: el.lineHeight || lastLineHeight
             }));
@@ -247,24 +253,49 @@ const App: React.FC = () => {
 
   const handlePrint = () => {
     setSelectedId(null);
+    // Slight delay to allow state to clear selection before print dialog
     setTimeout(() => window.print(), 100);
+  };
+
+  const handleGlobalFontSizeChange = (delta: number) => {
+    recordHistory();
+    setFormState(prev => ({
+        pages: prev.pages.map(page => ({
+            ...page,
+            elements: page.elements.map(el => ({
+                ...el,
+                fontSize: Math.max(8, el.fontSize + delta)
+            }))
+        }))
+    }));
   };
 
   // --- Handlers for Canvas Interaction ---
   const handleCanvasClick = (e: React.MouseEvent, pageId: string) => {
+    // Only add element if in 'text' tool mode
+    if (activeTool !== 'text') {
+        setSelectedId(null);
+        return;
+    }
+    
     if (dragState) return;
     const rect = e.currentTarget.getBoundingClientRect();
     const x = (e.clientX - rect.left) / zoom;
     const y = (e.clientY - rect.top) / zoom;
+    
+    // Default configuration for new boxes
     const defaultFontSize = 27;
-    const adjustedY = y - (defaultFontSize * 0.75);
+    // Centering: Subtract half the approximate height (font size) to center on click
+    const adjustedY = y - (defaultFontSize * 0.6);
 
     const newElement: TextElement = {
       id: generateId(),
       x, y: adjustedY,
-      text: '', fontSize: defaultFontSize,
+      text: '', 
+      fontSize: defaultFontSize,
       isBold: false, isItalic: false,
-      width: 200, height: defaultFontSize,
+      width: 450, // Default much wider as requested
+      height: defaultFontSize,
       lineHeight: lastLineHeight
     };
 
@@ -279,6 +310,7 @@ const App: React.FC = () => {
   };
 
   const handleBackgroundClick = (e: React.MouseEvent) => {
+    // Deselect if clicking outside of any element
     if (e.target === e.currentTarget) setSelectedId(null);
   };
 
@@ -322,7 +354,11 @@ const App: React.FC = () => {
       startX: e.clientX, startY: e.clientY,
       initialX: element.x, initialY: element.y
     });
-    setSelectedId(id);
+    // If in hand mode, we don't necessarily select it visually for editing, but we track it.
+    // If in pointer mode, we select it.
+    if (activeTool === 'select') {
+         setSelectedId(id);
+    }
   };
 
   useEffect(() => {
@@ -345,7 +381,7 @@ const App: React.FC = () => {
 
 
   return (
-    <div className="flex flex-col h-screen w-full bg-slate-200/80 overflow-hidden font-sans">
+    <div className={`flex flex-col h-screen w-full bg-slate-200/80 overflow-hidden font-sans ${activeTool === 'text' ? 'cursor-text' : ''}`}>
       
       {isLoading && (
         <div className="fixed inset-0 bg-white/80 backdrop-blur-sm z-[100] flex items-center justify-center">
@@ -363,6 +399,8 @@ const App: React.FC = () => {
         onDeleteSelected={() => selectedId && handleElementDelete(selectedId)}
         hasPages={formState.pages.length > 0} zoom={zoom} onZoomChange={setZoom}
         onUndo={undo} onRedo={redo} canUndo={past.length > 0} canRedo={future.length > 0}
+        activeTool={activeTool} onToolChange={setActiveTool}
+        onGlobalFontSizeChange={handleGlobalFontSizeChange}
       />
 
       {/* Main Workspace */}
@@ -378,7 +416,7 @@ const App: React.FC = () => {
                         <FilePlus size={48} />
                     </div>
                     <h2 className="text-2xl font-bold text-slate-700 mb-2">Comienza tu formulario</h2>
-                    <p className="text-slate-500 mb-8">Sube imágenes PNG de tus recetas o selecciona una plantilla predefinida para empezar a editar.</p>
+                    <p className="text-slate-500 mb-8">Sube imágenes PNG de tus recetas o selecciona una plantilla predefinida.</p>
                 </div>
            </div>
         ) : (
@@ -389,23 +427,23 @@ const App: React.FC = () => {
                >
                    {/* 
                       Page Container 
-                      En Pantalla: Sombra profunda, bordes, zoom.
-                      En Impresión: Clase 'print-page-container' fuerza el salto de página y resetea estilos.
                    */}
                    <div
                      onClick={(e) => { e.stopPropagation(); handleCanvasClick(e, page.id); }}
-                     className="relative bg-white shadow-2xl print-page-container origin-top a4-page ring-1 ring-black/5"
+                     className={`relative bg-white shadow-2xl print-page-container origin-top a4-page ring-1 ring-black/5 
+                        ${activeTool === 'text' ? 'cursor-text' : activeTool === 'hand' ? 'cursor-grab' : 'cursor-default'}
+                     `}
                      style={{
                         transform: `scale(${zoom})`,
                         marginBottom: `${(zoom - 1) * 100}px`,
-                        cursor: 'text'
                      }}
                    >
-                       <img src={page.imageUrl} alt={`Página ${index + 1}`} className="w-full h-auto select-none pointer-events-none block" />
+                       <img src={page.imageUrl} alt={`Página ${index + 1}`} className="w-full h-full select-none pointer-events-none block object-contain" />
                        
                        {page.elements.map(el => (
                            <DraggableInput
                                key={el.id} element={el} isSelected={selectedId === el.id} scale={zoom}
+                               activeTool={activeTool}
                                onSelect={setSelectedId} onChange={handleElementChange} onDelete={handleElementDelete}
                                onDuplicate={handleElementDuplicate} onMouseDown={startDrag} onRecordHistory={recordHistory}
                            />
@@ -447,8 +485,10 @@ const App: React.FC = () => {
       </div>
       
       {/* Footer */}
-      <div className="bg-white border-t border-slate-200 p-2 text-center text-xs text-slate-400 no-print font-medium">
-        MediFill &copy; {new Date().getFullYear()} - {formState.pages.length > 0 ? `Zoom: ${Math.round(zoom * 100)}%` : "Listo"}
+      <div className="bg-white border-t border-slate-200 p-2 text-center text-xs text-slate-400 no-print font-medium flex justify-between px-4">
+        <span>MediFill &copy; {new Date().getFullYear()}</span>
+        <span>{activeTool === 'select' ? 'Modo Selección' : activeTool === 'hand' ? 'Modo Mano (Mover cuadros)' : 'Modo Texto (Click para añadir)'}</span>
+        <span>{formState.pages.length > 0 ? `Zoom: ${Math.round(zoom * 100)}%` : "Listo"}</span>
       </div>
     </div>
   );

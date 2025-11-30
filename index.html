@@ -13,14 +13,19 @@
       /* --- Estilos de Impresión --- */
       @media print {
         @page {
-          size: auto;   /* auto is the initial value */
-          margin: 0mm;  /* this affects the margin in the printer settings */
+          size: A4 portrait;
+          margin: 0;  /* Critical for exact alignment */
         }
 
-        body {
+        html, body {
+          width: 210mm;
+          height: 297mm;
           background: white !important;
           margin: 0 !important;
           padding: 0 !important;
+          overflow: visible !important; /* Changed from hidden to visible to ensure content prints */
+          -webkit-print-color-adjust: exact;
+          print-color-adjust: exact;
         }
         
         .no-print {
@@ -34,11 +39,14 @@
         .print-page-container {
           position: relative !important;
           transform: none !important;
+          left: 0 !important;
+          top: 0 !important;
           margin: 0 !important;
+          padding: 0 !important;
           border: none !important;
           box-shadow: none !important;
-          width: 100% !important;
-          height: 100vh !important; /* Ocupa toda la altura de la hoja */
+          width: 210mm !important;
+          height: 297mm !important;
           overflow: hidden !important;
           break-after: page !important;
           page-break-after: always !important;
@@ -50,15 +58,21 @@
           background: transparent !important;
           resize: none !important;
           overflow: hidden !important;
-          padding-left: 0 !important;
-          padding-right: 0 !important;
+          padding: 0 !important;
+          margin: 0 !important;
+          outline: none !important;
+          box-shadow: none !important;
+          /* Ensure text position matches screen exactly */
+          line-height: inherit !important; 
+          font-family: inherit !important;
+          letter-spacing: inherit !important;
         }
       }
       
       /* Estilos para simular hoja A4 en pantalla */
       .a4-page {
         width: 210mm; 
-        min-height: 297mm;
+        height: 297mm; /* Changed from min-height to fixed height for consistency */
         background: white;
       }
     </style>
