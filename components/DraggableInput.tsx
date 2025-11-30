@@ -28,14 +28,15 @@ export const DraggableInput: React.FC<DraggableInputProps> = ({
   onRecordHistory
 }) => {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const [isEditing, setIsEditing] = useState(false);
-
-  // Auto-resize height based on content to ensure no white space
+  
+  // Update height to strictly fit content
   useEffect(() => {
-    if (textareaRef.current) {
-      textareaRef.current.style.height = 'auto';
-      // Ajuste estricto: scrollHeight da la altura exacta del contenido
-      textareaRef.current.style.height = textareaRef.current.scrollHeight + 'px';
+    const el = textareaRef.current;
+    if (el) {
+      // Reset height to auto to get correct scrollHeight for shrinkage
+      el.style.height = 'auto';
+      // Set height to exactly the content height
+      el.style.height = `${el.scrollHeight}px`;
     }
   }, [element.text, element.fontSize, element.width, element.lineHeight]);
 
@@ -47,7 +48,8 @@ export const DraggableInput: React.FC<DraggableInputProps> = ({
     const startWidth = element.width;
 
     const onMouseMove = (moveEvent: MouseEvent) => {
-      const newWidth = Math.max(50, startWidth + (moveEvent.clientX - startX) / scale);
+      // Allow resizing down to 20px for small adjustments
+      const newWidth = Math.max(20, startWidth + (moveEvent.clientX - startX) / scale);
       onChange(element.id, { width: newWidth });
     };
 
@@ -60,25 +62,25 @@ export const DraggableInput: React.FC<DraggableInputProps> = ({
     document.addEventListener('mouseup', onMouseUp);
   };
 
-  const isPlaceholderMode = !element.text && !isSelected;
   const isHandMode = activeTool === 'hand';
 
-  // Styles for the container
+  // Container style: Absolute position, exact dimensions
   const containerStyle: React.CSSProperties = {
     left: `${element.x}px`,
     top: `${element.y}px`,
     width: `${element.width}px`,
-    transform: 'translate(0, 0)', 
+    position: 'absolute',
     cursor: isHandMode ? 'grab' : 'text',
-    pointerEvents: activeTool === 'text' ? 'none' : 'auto', 
+    // Always allow pointer events to enable selecting/moving even in text tool mode
+    pointerEvents: 'auto', 
     display: 'flex',
     flexDirection: 'column',
-    justifyContent: 'flex-start', // Align to top to avoid vertical drift
+    zIndex: isSelected ? 50 : 10,
   };
 
   return (
     <div
-      className={`absolute group flex flex-col ${isSelected ? 'z-50' : 'z-10'}`}
+      className="group"
       style={containerStyle}
       onClick={(e) => {
         e.stopPropagation();
@@ -87,61 +89,63 @@ export const DraggableInput: React.FC<DraggableInputProps> = ({
         }
       }}
       onMouseDown={(e) => {
+        // If in hand mode, the whole box is a handle
         if (isHandMode) {
           onMouseDown(e, element.id);
         }
       }}
     >
-      {/* Controls - Only visible when selected and NOT printing */}
+      {/* Controls Overlay - Visible when selected and NOT printing */}
       {isSelected && !isHandMode && (
         <div 
-            className="absolute -top-9 flex items-center gap-1 bg-white border border-gray-300 rounded shadow-sm px-1 py-0.5 no-print z-50 select-none"
-            style={{ left: '0px' }}
+            className="absolute -top-7 left-0 flex items-center gap-0.5 bg-white border border-gray-400 rounded shadow-md px-1 py-0.5 no-print z-[60] select-none h-6"
         >
-           {/* Drag Handle */}
+           {/* Move Handle */}
            <div
-            className="cursor-move p-1 hover:bg-gray-100 rounded text-gray-500"
-            onMouseDown={(e) => onMouseDown(e, element.id)}
+            className="cursor-move p-0.5 hover:bg-gray-100 rounded text-gray-700 active:cursor-grabbing"
+            onMouseDown={(e) => {
+                e.stopPropagation(); // Prevent text creation on canvas
+                onMouseDown(e, element.id); // Trigger drag
+            }}
             title="Mover"
           >
             <GripVertical size={14} />
           </div>
           
-          <div className="h-4 w-px bg-gray-300 mx-0.5"></div>
+          <div className="h-3 w-px bg-gray-300 mx-0.5"></div>
           
-          {/* Duplicate Button */}
+          {/* Duplicate */}
           <button
             onClick={(e) => {
               e.stopPropagation();
               onDuplicate(element.id);
             }}
-            className="p-1 hover:bg-blue-50 text-blue-500 rounded"
-            title="Duplicar (Ctrl+D)"
+            className="p-0.5 hover:bg-blue-50 text-blue-600 rounded"
+            title="Duplicar"
           >
             <Copy size={14} />
           </button>
 
-          <div className="h-4 w-px bg-gray-300 mx-0.5"></div>
+          <div className="h-3 w-px bg-gray-300 mx-0.5"></div>
 
-          {/* Delete Button */}
+          {/* Delete */}
           <button
             onClick={(e) => {
               e.stopPropagation();
               onDelete(element.id);
             }}
-            className="p-1 hover:bg-red-50 text-red-500 rounded"
-            title="Eliminar campo"
+            className="p-0.5 hover:bg-red-50 text-red-600 rounded"
+            title="Eliminar"
           >
             <Trash2 size={14} />
           </button>
         </div>
       )}
 
-      {/* The Text Input Area */}
-      <div className={`relative transition-all duration-200 w-full
-        ${isSelected ? 'ring-1 ring-blue-400 bg-blue-50/5' : ''}
-        ${isPlaceholderMode ? 'border border-dashed border-gray-400 bg-yellow-50/20' : isHandMode ? 'hover:bg-blue-100/10 hover:ring-1 hover:ring-blue-200/50' : 'hover:ring-1 hover:ring-gray-300/50 hover:bg-gray-50/10'}
-        print:border-none print:bg-transparent print:ring-0
+      {/* Text Area Container */}
+      <div className={`relative w-full
+        ${isSelected ? 'ring-1 ring-blue-500' : 'hover:ring-1 hover:ring-gray-300'}
+        print:ring-0
       `}>
         <textarea
           ref={textareaRef}
@@ -149,43 +153,40 @@ export const DraggableInput: React.FC<DraggableInputProps> = ({
           readOnly={isHandMode} 
           disabled={isHandMode}
           onChange={(e) => onChange(element.id, { text: e.target.value })}
-          className={`w-full bg-transparent resize-none outline-none overflow-hidden block placeholder:text-gray-400/70 print:placeholder:text-transparent
+          className={`w-full bg-transparent resize-none outline-none block overflow-hidden
              ${isHandMode ? 'cursor-grab pointer-events-none select-none' : 'cursor-text'}
           `}
           style={{
             fontSize: `${element.fontSize}px`,
             fontWeight: element.isBold ? 'bold' : 'normal',
             fontStyle: element.isItalic ? 'italic' : 'normal',
-            // Default line-height set to 1.1 for tight fit without cutting off descenders
-            lineHeight: element.lineHeight || 1.1, 
+            // Tight line height to fit text exactly without extra space
+            lineHeight: 1.0, 
             padding: 0, 
             margin: 0,
             border: 'none',
             fontFamily: 'Arial, sans-serif',
             textAlign: 'left',
-            display: 'block',
-            // Ensure no extra whitespace
-            verticalAlign: 'top',
+            whiteSpace: 'pre-wrap',
+            wordBreak: 'break-word'
           }}
-          placeholder={element.placeholder || (isSelected ? "..." : "")}
+          placeholder={isSelected ? "" : (element.placeholder || "")}
           spellCheck={false}
           onFocus={() => {
             if (!isHandMode) {
-                setIsEditing(true);
                 onRecordHistory();
             }
           }}
-          onBlur={() => setIsEditing(false)}
         />
         
-        {/* Resize Handle */}
+        {/* Resize Handle - Right Edge */}
         {isSelected && !isHandMode && (
           <div
-            className="absolute -right-1.5 bottom-1/2 translate-y-1/2 w-3 h-6 bg-blue-400 rounded-full cursor-e-resize flex items-center justify-center opacity-75 hover:opacity-100 no-print shadow-sm z-50"
+            className="absolute -right-2 top-0 bottom-0 w-4 cursor-col-resize flex items-center justify-center group/handle no-print z-50"
             onMouseDown={handleResize}
-            title="Arrastrar para cambiar ancho"
+            title="Ajustar ancho"
           >
-            <div className="w-0.5 h-3 bg-white rounded-full" />
+            <div className="w-1.5 h-6 bg-blue-500 rounded-full shadow-sm group-hover/handle:h-full group-hover/handle:w-1 transition-all opacity-50 group-hover/handle:opacity-100" />
           </div>
         )}
       </div>

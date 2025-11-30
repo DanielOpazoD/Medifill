@@ -16,16 +16,18 @@
       @media print {
         @page {
           size: A4 portrait;
-          margin: 0 !important;  /* CRITICAL: Force zero margins on the page itself */
+          margin: 0 !important;
         }
 
         html, body {
           width: 210mm;
-          height: 297mm;
+          /* height: auto ensures multiple pages can be printed */
+          height: auto !important; 
           background: white !important;
           margin: 0 !important;
           padding: 0 !important;
-          overflow: hidden !important; /* Hide scrollbars */
+          /* overflow visible allows the content to flow to next pages */
+          overflow: visible !important; 
           -webkit-print-color-adjust: exact;
           print-color-adjust: exact;
         }
@@ -51,6 +53,7 @@
           break-after: page !important;
           page-break-after: always !important;
           transform: none !important; /* Ensure no scaling affects position */
+          display: block !important;
         }
 
         /* Limpieza visual de los cuadros de texto al imprimir */
@@ -63,7 +66,7 @@
           margin: 0 !important;
           outline: none !important;
           box-shadow: none !important;
-          line-height: inherit !important; 
+          line-height: 1.0 !important; /* Force tight line height for print */
           font-family: inherit !important;
           letter-spacing: inherit !important;
           color: black !important;
