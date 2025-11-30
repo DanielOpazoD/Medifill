@@ -1,6 +1,6 @@
 import React, { useRef, useEffect } from 'react';
 import { TextElement, ToolType } from '../types';
-import { GripVertical, Trash2, Copy, MoveDiagonal } from 'lucide-react';
+import { GripVertical, Trash2, Copy, MoveDiagonal, Ruler } from 'lucide-react';
 
 interface DraggableInputProps {
   element: TextElement;
@@ -49,8 +49,8 @@ export const DraggableInput: React.FC<DraggableInputProps> = ({
       const newHeight = Math.max(element.fontSize, startHeight + deltaY);
 
       onChange(element.id, { 
-        width: newWidth,
-        height: newHeight
+        width: Math.round(newWidth),
+        height: Math.round(newHeight)
       });
     };
 
@@ -99,7 +99,7 @@ export const DraggableInput: React.FC<DraggableInputProps> = ({
         }
       }}
     >
-      {/* --- Action Toolbar (Move, Copy, Delete) --- */}
+      {/* --- Action Toolbar (Move, Copy, Delete, Dimensions) --- */}
       {/* Visible only when selected and NOT printing */}
       {isSelected && !isHandMode && (
         <div className="absolute -top-9 left-0 flex items-center gap-1 bg-white border border-slate-300 rounded shadow-lg px-2 py-1 no-print z-[60]">
@@ -114,7 +114,18 @@ export const DraggableInput: React.FC<DraggableInputProps> = ({
           >
             <GripVertical size={16} />
           </div>
+          
           <div className="h-4 w-px bg-slate-200"></div>
+          
+          {/* Dimensions Badge */}
+          <div className="flex items-center gap-1 px-1 text-[10px] font-mono text-slate-500 select-none cursor-default" title="Dimensiones actuales">
+            <span className="font-bold">{Math.round(element.width)}</span>
+            <span className="text-slate-300">x</span>
+            <span className="font-bold">{Math.round(element.height)}</span>
+          </div>
+
+          <div className="h-4 w-px bg-slate-200"></div>
+          
           {/* Duplicate */}
           <button
             onClick={(e) => { e.stopPropagation(); onDuplicate(element.id); }}
@@ -123,7 +134,9 @@ export const DraggableInput: React.FC<DraggableInputProps> = ({
           >
             <Copy size={16} />
           </button>
+          
           <div className="h-4 w-px bg-slate-200"></div>
+          
           {/* Delete */}
           <button
             onClick={(e) => { e.stopPropagation(); onDelete(element.id); }}

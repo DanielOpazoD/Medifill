@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Toolbar } from './components/Toolbar';
 import { DraggableInput } from './components/DraggableInput';
-import { TextElement, FormState, Page, ToolType } from './types';
+import { TextElement, FormState, Page, ToolType, DefaultSettings } from './types';
 import { Trash2, ChevronUp, ChevronDown, FilePlus } from 'lucide-react';
 import { TEMPLATES } from './templates';
 
@@ -24,6 +24,11 @@ const App: React.FC = () => {
 
   // App Preferences
   const [lastLineHeight, setLastLineHeight] = useState<number>(1.1); // Default to tight 1.1
+  const [defaultSettings, setDefaultSettings] = useState<DefaultSettings>({
+      width: 500,
+      height: 40,
+      fontSize: 27
+  });
   
   // Dragging State
   const [dragState, setDragState] = useState<{
@@ -283,20 +288,19 @@ const App: React.FC = () => {
     const y = (e.clientY - rect.top) / zoom;
     
     // Default configuration for new boxes
-    const defaultFontSize = 27;
-    const defaultHeight = 40; // Reasonable default height
+    const { width, height, fontSize } = defaultSettings;
 
     // Centering: Subtract half height to center on click
-    const adjustedY = y - (defaultHeight * 0.5);
+    const adjustedY = y - (height * 0.5);
 
     const newElement: TextElement = {
       id: generateId(),
       x, y: adjustedY,
       text: '', 
-      fontSize: defaultFontSize,
+      fontSize: fontSize,
       isBold: false, isItalic: false,
-      width: 500, // Default much wider
-      height: defaultHeight,
+      width: width, 
+      height: height,
       lineHeight: lastLineHeight
     };
 
@@ -381,7 +385,7 @@ const App: React.FC = () => {
 
 
   return (
-    <div className={`flex flex-col h-screen w-full bg-slate-200/80 overflow-hidden font-sans ${activeTool === 'text' ? 'cursor-text' : ''}`}>
+    <div className={`flex flex-col h-screen w-full bg-slate-200/80 overflow-hidden print:h-auto print:overflow-visible font-sans ${activeTool === 'text' ? 'cursor-text' : ''}`}>
       
       {isLoading && (
         <div className="fixed inset-0 bg-white/80 backdrop-blur-sm z-[100] flex items-center justify-center">
@@ -401,6 +405,7 @@ const App: React.FC = () => {
         onUndo={undo} onRedo={redo} canUndo={past.length > 0} canRedo={future.length > 0}
         activeTool={activeTool} onToolChange={setActiveTool}
         onGlobalFontSizeChange={handleGlobalFontSizeChange}
+        defaultSettings={defaultSettings} onUpdateDefaultSettings={setDefaultSettings}
       />
 
       {/* Main Workspace */}

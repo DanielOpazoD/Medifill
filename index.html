@@ -21,15 +21,19 @@
 
         html, body {
           width: 210mm;
-          /* height: auto ensures multiple pages can be printed */
           height: auto !important; 
+          min-height: 100%;
           background: white !important;
           margin: 0 !important;
           padding: 0 !important;
-          /* overflow visible allows the content to flow to next pages */
           overflow: visible !important; 
           -webkit-print-color-adjust: exact;
           print-color-adjust: exact;
+        }
+
+        #root {
+          height: auto !important;
+          overflow: visible !important;
         }
         
         .no-print {
@@ -51,6 +55,7 @@
           height: 297mm !important;
           overflow: hidden !important;
           break-after: page !important;
+          break-inside: avoid !important;
           page-break-after: always !important;
           transform: none !important; /* Ensure no scaling affects position */
           display: block !important;

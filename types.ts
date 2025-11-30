@@ -34,4 +34,10 @@ export interface TemplateConfig {
   pages: TemplatePageConfig[];
 }
 
+export interface DefaultSettings {
+  width: number;
+  height: number;
+  fontSize: number;
+}
+
 export type ToolType = 'select' | 'hand' | 'text';

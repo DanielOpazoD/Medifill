@@ -1,7 +1,7 @@
 
-import React, { useRef } from 'react';
-import { Upload, Printer, Download, FileJson, Type, Bold, Italic, Trash2, RotateCcw, RotateCw, ZoomIn, ZoomOut, LayoutTemplate, Minus, Plus, FilePlus, Hand, MousePointer2, Type as TypeIcon, CaseUpper } from 'lucide-react';
-import { TextElement, ToolType } from '../types';
+import React, { useRef, useState, useEffect } from 'react';
+import { Upload, Printer, Download, FileJson, Type, Bold, Italic, Trash2, RotateCcw, RotateCw, ZoomIn, ZoomOut, LayoutTemplate, Minus, Plus, FilePlus, Hand, MousePointer2, Type as TypeIcon, CaseUpper, Settings, X } from 'lucide-react';
+import { TextElement, ToolType, DefaultSettings } from '../types';
 import { TEMPLATES } from '../templates';
 
 interface ToolbarProps {
@@ -24,6 +24,8 @@ interface ToolbarProps {
   activeTool: ToolType;
   onToolChange: (tool: ToolType) => void;
   onGlobalFontSizeChange: (delta: number) => void;
+  defaultSettings: DefaultSettings;
+  onUpdateDefaultSettings: (settings: DefaultSettings) => void;
 }
 
 export const Toolbar: React.FC<ToolbarProps> = ({
@@ -45,10 +47,32 @@ export const Toolbar: React.FC<ToolbarProps> = ({
   canRedo,
   activeTool,
   onToolChange,
-  onGlobalFontSizeChange
+  onGlobalFontSizeChange,
+  defaultSettings,
+  onUpdateDefaultSettings
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const jsonInputRef = useRef<HTMLInputElement>(null);
+  
+  // States for menus
+  const [isTemplateMenuOpen, setIsTemplateMenuOpen] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const templateMenuRef = useRef<HTMLDivElement>(null);
+  const settingsRef = useRef<HTMLDivElement>(null);
+
+  // Cerrar menús al hacer clic fuera
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (templateMenuRef.current && !templateMenuRef.current.contains(event.target as Node)) {
+        setIsTemplateMenuOpen(false);
+      }
+      if (settingsRef.current && !settingsRef.current.contains(event.target as Node)) {
+        setIsSettingsOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
@@ -92,23 +116,84 @@ export const Toolbar: React.FC<ToolbarProps> = ({
         </div>
         
         {/* Templates */}
-        <div className="relative group">
-            <button className="flex items-center gap-1 px-2 py-1.5 bg-slate-50 text-slate-700 hover:bg-slate-100 hover:text-blue-600 rounded-md transition-all text-sm font-medium border border-slate-200 hover:border-blue-200 shadow-sm">
+        <div className="relative" ref={templateMenuRef}>
+            <button 
+                onClick={() => setIsTemplateMenuOpen(!isTemplateMenuOpen)}
+                className={`flex items-center gap-1 px-2 py-1.5 bg-slate-50 text-slate-700 hover:bg-slate-100 hover:text-blue-600 rounded-md transition-all text-sm font-medium border border-slate-200 hover:border-blue-200 shadow-sm ${isTemplateMenuOpen ? 'bg-slate-100 text-blue-600 ring-2 ring-blue-100 border-blue-300' : ''}`}
+            >
                 <LayoutTemplate size={16} />
                 <span className="hidden xl:inline">Plantillas</span>
             </button>
-            <div className="absolute top-full left-0 mt-1 w-64 bg-white border border-slate-200 rounded-lg shadow-xl hidden group-hover:block z-50 p-1">
-                <div className="px-3 py-2 text-xs font-semibold text-slate-400 uppercase tracking-wider">Disponibles</div>
-                {TEMPLATES.map(template => (
-                  <button 
-                      key={template.id}
-                      onClick={() => onLoadTemplate(template.id)}
-                      className="w-full text-left px-3 py-2 hover:bg-blue-50 text-sm text-slate-700 rounded-md transition-colors"
-                  >
-                      {template.name}
-                  </button>
-                ))}
-            </div>
+            
+            {isTemplateMenuOpen && (
+                <div className="absolute top-full left-0 mt-1 w-64 bg-white border border-slate-200 rounded-lg shadow-xl z-50 p-1 animate-in fade-in zoom-in-95 duration-100">
+                    <div className="px-3 py-2 text-xs font-semibold text-slate-400 uppercase tracking-wider">Disponibles</div>
+                    {TEMPLATES.map(template => (
+                      <button 
+                          key={template.id}
+                          onClick={() => {
+                              onLoadTemplate(template.id);
+                              setIsTemplateMenuOpen(false); // Cerrar menú al seleccionar
+                          }}
+                          className="w-full text-left px-3 py-2 hover:bg-blue-50 text-sm text-slate-700 rounded-md transition-colors"
+                      >
+                          {template.name}
+                      </button>
+                    ))}
+                </div>
+            )}
+        </div>
+
+        {/* Default Settings (New) */}
+        <div className="relative" ref={settingsRef}>
+            <button
+                onClick={() => setIsSettingsOpen(!isSettingsOpen)}
+                className={`p-1.5 rounded-md transition-all ${isSettingsOpen ? 'bg-slate-200 text-slate-800' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-700'}`}
+                title="Configuración de nuevos cuadros"
+            >
+                <Settings size={18} />
+            </button>
+            {isSettingsOpen && (
+                 <div className="absolute top-full left-0 mt-1 w-72 bg-white border border-slate-200 rounded-lg shadow-xl z-50 p-4 animate-in fade-in zoom-in-95 duration-100">
+                     <div className="flex justify-between items-center mb-3">
+                         <h3 className="text-sm font-bold text-slate-700">Configuración por defecto</h3>
+                         <button onClick={() => setIsSettingsOpen(false)} className="text-slate-400 hover:text-slate-600"><X size={14}/></button>
+                     </div>
+                     <p className="text-xs text-slate-500 mb-3">Valores para nuevos cuadros de texto:</p>
+                     
+                     <div className="space-y-3">
+                         <div className="grid grid-cols-2 gap-2">
+                             <div>
+                                 <label className="text-xs font-semibold text-slate-600 block mb-1">Ancho (px)</label>
+                                 <input 
+                                    type="number" 
+                                    value={defaultSettings.width}
+                                    onChange={(e) => onUpdateDefaultSettings({...defaultSettings, width: parseInt(e.target.value) || 100})}
+                                    className="w-full border border-slate-300 rounded px-2 py-1 text-sm"
+                                 />
+                             </div>
+                             <div>
+                                 <label className="text-xs font-semibold text-slate-600 block mb-1">Alto (px)</label>
+                                 <input 
+                                    type="number" 
+                                    value={defaultSettings.height}
+                                    onChange={(e) => onUpdateDefaultSettings({...defaultSettings, height: parseInt(e.target.value) || 20})}
+                                    className="w-full border border-slate-300 rounded px-2 py-1 text-sm"
+                                 />
+                             </div>
+                         </div>
+                         <div>
+                             <label className="text-xs font-semibold text-slate-600 block mb-1">Tamaño letra (px)</label>
+                             <input 
+                                type="number" 
+                                value={defaultSettings.fontSize}
+                                onChange={(e) => onUpdateDefaultSettings({...defaultSettings, fontSize: parseInt(e.target.value) || 12})}
+                                className="w-full border border-slate-300 rounded px-2 py-1 text-sm"
+                             />
+                         </div>
+                     </div>
+                 </div>
+            )}
         </div>
 
         {/* Upload */}
