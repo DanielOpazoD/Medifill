@@ -8,16 +8,7 @@ interface SnippetsSidebarProps {
   onAddSnippetToCanvas: (text: string) => void;
 }
 
-// Updated with specific medical phrases
-const DEFAULT_SNIPPETS: Snippet[] = [
-  { id: 'def-1', text: 'CSV CADA 6 HORAS', category: 'indicaciones' },
-  { id: 'def-2', text: 'CSV CADA 4 HORAS', category: 'indicaciones' },
-  { id: 'def-3', text: 'CSV CADA 8 HORAS', category: 'indicaciones' },
-  { id: 'def-4', text: 'ENOXAPARINA 40 MG/DIA SC', category: 'medicamentos' },
-  { id: 'def-5', text: 'ENOXAPARINA 60 MG/DIA SC', category: 'medicamentos' },
-  { id: 'def-6', text: 'ENOXAPARINA 60 MG CADA 12 HORAS SC', category: 'medicamentos' },
-  { id: 'def-7', text: 'HEPARINA NO FRACCIONADA 5000 UI CADA 12 HORAS', category: 'medicamentos' },
-];
+const DEFAULT_SNIPPETS: Snippet[] = [];
 
 export const SnippetsSidebar: React.FC<SnippetsSidebarProps> = ({ isOpen, onClose, onAddSnippetToCanvas }) => {
   const [snippets, setSnippets] = useState<Snippet[]>(() => {

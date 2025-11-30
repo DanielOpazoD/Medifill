@@ -1,12 +1,11 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { Upload, Printer, Download, FileJson, Bold, Italic, Trash2, RotateCcw, RotateCw, ZoomIn, ZoomOut, LayoutTemplate, Minus, Plus, FilePlus, Hand, MousePointer2, Type as TypeIcon, CaseUpper, Settings, X, Eraser, PenLine, Eye, ChevronDown, Grid3X3, BookOpen, FileDown } from 'lucide-react';
+import { Upload, Printer, Download, FileJson, Bold, Italic, Trash2, RotateCcw, RotateCw, ZoomIn, ZoomOut, LayoutTemplate, Minus, Plus, FilePlus, Hand, MousePointer2, Type as TypeIcon, CaseUpper, Settings, X, Eraser, PenLine, Eye, ChevronDown, Grid3X3, BookOpen } from 'lucide-react';
 import { TextElement, ToolType, DefaultSettings } from '../types';
 import { TEMPLATES } from '../templates';
 
 interface ToolbarProps {
   onUpload: (files: FileList) => void;
   onPrint: () => void;
-  onDownloadPDF: () => void;
   onExport: () => void;
   onImport: (file: File) => void;
   onClear: () => void;
@@ -38,7 +37,6 @@ interface ToolbarProps {
 export const Toolbar: React.FC<ToolbarProps> = ({
   onUpload,
   onPrint,
-  onDownloadPDF,
   onExport,
   onImport,
   onClear,
@@ -469,16 +467,6 @@ export const Toolbar: React.FC<ToolbarProps> = ({
             title="Impresión rápida (Navegador)"
             >
                 <Printer size={20} />
-            </button>
-            
-            {/* Red: Native PDF Export */}
-            <button
-            onClick={onDownloadPDF}
-            disabled={!hasPages}
-            className="flex items-center justify-center p-2 bg-red-600 text-white rounded-lg hover:bg-red-700 hover:shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none"
-            title="Exportar a PDF (Calidad exacta)"
-            >
-                <FileDown size={20} />
             </button>
         </div>
       </div>
