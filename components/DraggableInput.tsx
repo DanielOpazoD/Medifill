@@ -192,6 +192,7 @@ export const DraggableInput: React.FC<DraggableInputProps> = ({
           textAlign: 'left',
           color: '#000',
           padding: 0,
+          paddingLeft: `${element.indent || 0}px`,
           margin: 0,
           border: 'none',
           height: 'auto', 

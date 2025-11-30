@@ -1,5 +1,5 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { Upload, Printer, Download, FileJson, Bold, Italic, Trash2, RotateCcw, RotateCw, ZoomIn, ZoomOut, LayoutTemplate, Minus, Plus, FilePlus, Hand, MousePointer2, Type as TypeIcon, CaseUpper, Settings, X, Eraser, PenLine, Eye, ChevronDown, Grid3X3, BookOpen } from 'lucide-react';
+import { Upload, Printer, Download, FileJson, Bold, Italic, Trash2, RotateCcw, RotateCw, ZoomIn, ZoomOut, LayoutTemplate, Minus, Plus, FilePlus, Hand, MousePointer2, Type as TypeIcon, CaseUpper, Settings, X, Eraser, PenLine, Eye, ChevronDown, Grid3X3, BookOpen, Indent } from 'lucide-react';
 import { TextElement, ToolType, DefaultSettings } from '../types';
 import { TEMPLATES } from '../templates';
 
@@ -24,6 +24,7 @@ interface ToolbarProps {
   activeTool: ToolType;
   onToolChange: (tool: ToolType) => void;
   onGlobalFontSizeChange: (delta: number) => void;
+  onGlobalIndentChange: (delta: number) => void;
   defaultSettings: DefaultSettings;
   onUpdateDefaultSettings: (settings: DefaultSettings) => void;
   isFillMode: boolean;
@@ -55,6 +56,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
   activeTool,
   onToolChange,
   onGlobalFontSizeChange,
+  onGlobalIndentChange,
   defaultSettings,
   onUpdateDefaultSettings,
   isFillMode,
@@ -435,11 +437,18 @@ export const Toolbar: React.FC<ToolbarProps> = ({
                 )}
             </div>
 
-            {/* Global Font Size Adjuster */}
-            <div className="flex items-center gap-0.5 bg-yellow-50 rounded-lg px-1 py-0.5 border border-yellow-200" title="Cambiar tamaño de letra a TODO el documento">
-                <div className="text-yellow-600 p-1"><CaseUpper size={16} /></div>
-                <button onClick={() => onGlobalFontSizeChange(-2)} className="p-1 hover:bg-white hover:text-yellow-700 rounded text-yellow-600 transition-colors"><Minus size={12} /></button>
-                <button onClick={() => onGlobalFontSizeChange(2)} className="p-1 hover:bg-white hover:text-yellow-700 rounded text-yellow-600 transition-colors"><Plus size={12} /></button>
+            {/* Global Font Size & Indent Adjuster */}
+            <div className="flex items-center gap-1 bg-yellow-50 rounded-lg px-1 py-0.5 border border-yellow-200">
+                <div className="flex items-center gap-0.5 pr-2 border-r border-yellow-200" title="Cambiar tamaño de letra a TODO el documento">
+                    <div className="text-yellow-600 p-1"><CaseUpper size={16} /></div>
+                    <button onClick={() => onGlobalFontSizeChange(-2)} className="p-1 hover:bg-white hover:text-yellow-700 rounded text-yellow-600 transition-colors"><Minus size={12} /></button>
+                    <button onClick={() => onGlobalFontSizeChange(2)} className="p-1 hover:bg-white hover:text-yellow-700 rounded text-yellow-600 transition-colors"><Plus size={12} /></button>
+                </div>
+                <div className="flex items-center gap-0.5 pl-1" title="Cambiar sangría a TODO el documento">
+                    <div className="text-indigo-600 p-1"><Indent size={16} /></div>
+                    <button onClick={() => onGlobalIndentChange(-5)} className="p-1 hover:bg-white hover:text-indigo-700 rounded text-indigo-600 transition-colors"><Minus size={12} /></button>
+                    <button onClick={() => onGlobalIndentChange(5)} className="p-1 hover:bg-white hover:text-indigo-700 rounded text-indigo-600 transition-colors"><Plus size={12} /></button>
+                </div>
             </div>
           </div>
         )}

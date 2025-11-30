@@ -39,7 +39,8 @@ const App: React.FC = () => {
   const [defaultSettings, setDefaultSettings] = useState<DefaultSettings>({
       width: 225,
       height: 17,
-      fontSize: 15
+      fontSize: 15,
+      indent: 0
   });
   
   // Dragging State (Elements)
@@ -274,7 +275,8 @@ const App: React.FC = () => {
                 isItalic: !!el.isItalic,
                 width: el.width || 225, 
                 height: el.height || 17,
-                lineHeight: el.lineHeight || lastLineHeight
+                lineHeight: el.lineHeight || lastLineHeight,
+                indent: el.indent || defaultSettings.indent || 0
             }));
             newPages.push({ id: generateId(), imageUrl: base64, elements: elements });
         }
@@ -369,6 +371,24 @@ const App: React.FC = () => {
     }));
   };
 
+  const handleGlobalIndentChange = (delta: number) => {
+    recordHistory();
+    setFormState(prev => ({
+        pages: prev.pages.map(page => ({
+            ...page,
+            elements: page.elements.map(el => ({
+                ...el,
+                indent: Math.max(0, (el.indent || 0) + delta)
+            }))
+        }))
+    }));
+    // Also update default settings
+    setDefaultSettings(prev => ({
+        ...prev,
+        indent: Math.max(0, (prev.indent || 0) + delta)
+    }));
+  };
+
   // --- Handlers for Canvas Interaction ---
   
   const handleMouseDownOnCanvas = (e: React.MouseEvent, pageId: string) => {
@@ -404,7 +424,7 @@ const App: React.FC = () => {
     let x = (e.clientX - rect.left) / zoom;
     let y = (e.clientY - rect.top) / zoom;
     
-    const { width, height, fontSize } = defaultSettings;
+    const { width, height, fontSize, indent } = defaultSettings;
     let adjustedY = y - (height * 0.5);
 
     // --- SNAP TO GRID ON CREATION ---
@@ -421,7 +441,8 @@ const App: React.FC = () => {
       isBold: false, isItalic: false,
       width: width, 
       height: height,
-      lineHeight: lastLineHeight
+      lineHeight: lastLineHeight,
+      indent: indent || 0
     };
 
     recordHistory();
@@ -465,7 +486,8 @@ const App: React.FC = () => {
             isBold: false, isItalic: false,
             width: defaultSettings.width, 
             height: defaultSettings.height,
-            lineHeight: lastLineHeight
+            lineHeight: lastLineHeight,
+            indent: defaultSettings.indent || 0
         };
 
         setFormState(prev => ({
@@ -506,7 +528,8 @@ const App: React.FC = () => {
       isBold: false, isItalic: false,
       width: defaultSettings.width, 
       height: height,
-      lineHeight: lastLineHeight
+      lineHeight: lastLineHeight,
+      indent: defaultSettings.indent || 0
     };
 
     recordHistory();
@@ -559,7 +582,7 @@ const App: React.FC = () => {
   };
 
   const handleSelectElement = (id: string, multi: boolean) => {
-      if (isFillMode) return;
+      // In Fill Mode, we still allow selection for targetting snippets, but visual cues are hidden by CSS.
       if (multi) {
           setSelectedIds(prev => prev.includes(id) ? prev.filter(pid => pid !== id) : [...prev, id]);
       } else {
@@ -778,6 +801,7 @@ const App: React.FC = () => {
         onUndo={undo} onRedo={redo} canUndo={past.length > 0} canRedo={future.length > 0}
         activeTool={activeTool} onToolChange={setActiveTool}
         onGlobalFontSizeChange={handleGlobalFontSizeChange}
+        onGlobalIndentChange={handleGlobalIndentChange}
         defaultSettings={defaultSettings} onUpdateDefaultSettings={setDefaultSettings}
         isFillMode={isFillMode} onToggleFillMode={() => {
             setIsFillMode(!isFillMode);

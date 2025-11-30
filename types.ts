@@ -12,6 +12,7 @@ export interface TextElement {
   width: number; // width in pixels
   height: number; // height in pixels
   lineHeight?: number; // Line height multiplier (default 0.9)
+  indent?: number; // Left padding/indentation in pixels
 }
 
 export interface Page {
@@ -39,6 +40,7 @@ export interface DefaultSettings {
   width: number;
   height: number;
   fontSize: number;
+  indent?: number;
 }
 
 export interface Snippet {
