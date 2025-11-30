@@ -173,7 +173,7 @@ const App: React.FC = () => {
                 isBold: !!el.isBold,
                 isItalic: !!el.isItalic,
                 width: el.width || 500, // Updated Default width
-                height: el.height || 30,
+                height: el.height || 40,
                 lineHeight: el.lineHeight || lastLineHeight
             }));
             newPages.push({ id: generateId(), imageUrl: base64, elements: elements });
@@ -284,8 +284,10 @@ const App: React.FC = () => {
     
     // Default configuration for new boxes
     const defaultFontSize = 27;
-    // Centering: Subtract a portion of the font size to center vertically on click
-    const adjustedY = y - (defaultFontSize * 0.5);
+    const defaultHeight = 40; // Reasonable default height
+
+    // Centering: Subtract half height to center on click
+    const adjustedY = y - (defaultHeight * 0.5);
 
     const newElement: TextElement = {
       id: generateId(),
@@ -293,8 +295,8 @@ const App: React.FC = () => {
       text: '', 
       fontSize: defaultFontSize,
       isBold: false, isItalic: false,
-      width: 500, // Default much wider (500px)
-      height: defaultFontSize,
+      width: 500, // Default much wider
+      height: defaultHeight,
       lineHeight: lastLineHeight
     };
 
