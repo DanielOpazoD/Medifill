@@ -40,4 +40,10 @@ export interface DefaultSettings {
   fontSize: number;
 }
 
+export interface Snippet {
+  id: string;
+  text: string;
+  category: 'general' | 'medicamentos' | 'indicaciones' | 'personal';
+}
+
 export type ToolType = 'select' | 'hand' | 'text';

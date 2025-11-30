@@ -2,12 +2,14 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Toolbar } from './components/Toolbar';
 import { DraggableInput } from './components/DraggableInput';
+import { SnippetsSidebar } from './components/SnippetsSidebar';
 import { TextElement, FormState, Page, ToolType, DefaultSettings } from './types';
-import { Trash2, ChevronUp, ChevronDown, FilePlus } from 'lucide-react';
+import { Trash2, ChevronUp, ChevronDown, FilePlus, AlertCircle, RefreshCw } from 'lucide-react';
 import { TEMPLATES } from './templates';
 
 // Utility to generate IDs
 const generateId = () => Math.random().toString(36).substr(2, 9);
+const AUTOSAVE_KEY = 'medifill_autosave_state';
 
 const App: React.FC = () => {
   const [formState, setFormState] = useState<FormState>({ pages: [] });
@@ -23,15 +25,22 @@ const App: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isFillMode, setIsFillMode] = useState(false);
   
+  // New Feature States
+  const [showGrid, setShowGrid] = useState(false);
+  const [showSnippets, setShowSnippets] = useState(false);
+  const [hasRestorableSession, setHasRestorableSession] = useState(false);
+  
   // Tools
   const [activeTool, setActiveTool] = useState<ToolType>('select');
 
   // App Preferences
   const [lastLineHeight, setLastLineHeight] = useState<number>(1.1);
+  
+  // CONFIGURACIÓN POR DEFECTO ACTUALIZADA
   const [defaultSettings, setDefaultSettings] = useState<DefaultSettings>({
-      width: 500,
-      height: 40,
-      fontSize: 27
+      width: 225,
+      height: 17,
+      fontSize: 15
   });
   
   // Dragging State (Elements)
@@ -45,6 +54,54 @@ const App: React.FC = () => {
 
   // Selection Box State
   const [selectionBox, setSelectionBox] = useState<{startX: number, startY: number, currentX: number, currentY: number} | null>(null);
+
+  // --- 1. PERSISTENCE (AUTO-SAVE) ---
+  
+  // Check for saved session on mount
+  useEffect(() => {
+    const saved = localStorage.getItem(AUTOSAVE_KEY);
+    if (saved) {
+        setHasRestorableSession(true);
+    }
+  }, []);
+
+  const restoreSession = () => {
+    try {
+        const saved = localStorage.getItem(AUTOSAVE_KEY);
+        if (saved) {
+            const parsed = JSON.parse(saved);
+            if (parsed && Array.isArray(parsed.pages)) {
+                setFormState(parsed);
+                setHasRestorableSession(false); // Hide banner
+            }
+        }
+    } catch (e) {
+        console.error("Failed to restore session", e);
+        alert("No se pudo restaurar la sesión (datos corruptos).");
+    }
+  };
+
+  const discardSession = () => {
+      localStorage.removeItem(AUTOSAVE_KEY);
+      setHasRestorableSession(false);
+  };
+
+  // Auto-save effect (Debounced)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+        if (formState.pages.length > 0) {
+            try {
+                localStorage.setItem(AUTOSAVE_KEY, JSON.stringify(formState));
+            } catch (e) {
+                // Ignore quota exceeded errors silently or warn once
+                console.warn("Local storage full, cannot autosave images.");
+            }
+        }
+    }, 2000); // 2 seconds debounce
+
+    return () => clearTimeout(timer);
+  }, [formState]);
+
 
   // --- History Helpers ---
   const recordHistory = () => {
@@ -213,11 +270,11 @@ const App: React.FC = () => {
                 y: el.y || 50,
                 text: el.text || '',
                 placeholder: el.placeholder,
-                fontSize: el.fontSize || 27,
+                fontSize: el.fontSize || 15,
                 isBold: !!el.isBold,
                 isItalic: !!el.isItalic,
-                width: el.width || 500, 
-                height: el.height || 40,
+                width: el.width || 225, 
+                height: el.height || 17,
                 lineHeight: el.lineHeight || lastLineHeight
             }));
             newPages.push({ id: generateId(), imageUrl: base64, elements: elements });
@@ -238,6 +295,7 @@ const App: React.FC = () => {
         recordHistory();
         setFormState({ pages: [] });
         setSelectedIds([]);
+        localStorage.removeItem(AUTOSAVE_KEY);
     }
   };
 
@@ -344,11 +402,17 @@ const App: React.FC = () => {
     
     if (dragState) return;
     const rect = e.currentTarget.getBoundingClientRect();
-    const x = (e.clientX - rect.left) / zoom;
-    const y = (e.clientY - rect.top) / zoom;
+    let x = (e.clientX - rect.left) / zoom;
+    let y = (e.clientY - rect.top) / zoom;
     
     const { width, height, fontSize } = defaultSettings;
-    const adjustedY = y - (height * 0.5);
+    let adjustedY = y - (height * 0.5);
+
+    // --- SNAP TO GRID ON CREATION ---
+    if (showGrid) {
+        x = Math.round(x / 20) * 20;
+        adjustedY = Math.round(adjustedY / 20) * 20;
+    }
 
     const newElement: TextElement = {
       id: generateId(),
@@ -370,6 +434,92 @@ const App: React.FC = () => {
     }));
     setSelectedIds([newElement.id]);
   };
+
+  // --- 3. SNIPPET HANDLING (CLICK & DROP) ---
+
+  // LÓGICA ACTUALIZADA: Aplicar a la selección actual o crear nuevo
+  const handleAddSnippetClick = (text: string) => {
+    if (formState.pages.length === 0) return;
+    
+    recordHistory();
+
+    // Caso 1: Hay cuadros seleccionados -> Reemplazar texto en ellos
+    if (selectedIds.length > 0) {
+        setFormState(prev => ({
+            pages: prev.pages.map(page => ({
+                ...page,
+                elements: page.elements.map(el => 
+                    selectedIds.includes(el.id) ? { ...el, text: text } : el
+                )
+            }))
+        }));
+    } 
+    // Caso 2: No hay selección -> Crear uno nuevo (comportamiento anterior)
+    else {
+        const targetPageId = formState.pages[0].id;
+        
+        const newElement: TextElement = {
+            id: generateId(),
+            x: 100, y: 100,
+            text: text, 
+            fontSize: defaultSettings.fontSize,
+            isBold: false, isItalic: false,
+            width: defaultSettings.width, 
+            height: defaultSettings.height,
+            lineHeight: lastLineHeight
+        };
+
+        setFormState(prev => ({
+            pages: prev.pages.map(p => {
+                if (p.id === targetPageId) return { ...p, elements: [...p.elements, newElement] };
+                return p;
+            })
+        }));
+        setSelectedIds([newElement.id]);
+    }
+  };
+
+  // Handle dropping a snippet onto a page
+  const handleDropOnPage = (e: React.DragEvent, pageId: string) => {
+    e.preventDefault();
+    const text = e.dataTransfer.getData('text/plain');
+    if (!text) return;
+
+    const rect = e.currentTarget.getBoundingClientRect();
+    let x = (e.clientX - rect.left) / zoom;
+    let y = (e.clientY - rect.top) / zoom;
+
+    // Center the element on the mouse
+    const height = defaultSettings.height;
+    y = y - (height * 0.5);
+
+    // Snap
+    if (showGrid) {
+        x = Math.round(x / 20) * 20;
+        y = Math.round(y / 20) * 20;
+    }
+
+    const newElement: TextElement = {
+      id: generateId(),
+      x, y,
+      text: text, 
+      fontSize: defaultSettings.fontSize,
+      isBold: false, isItalic: false,
+      width: defaultSettings.width, 
+      height: height,
+      lineHeight: lastLineHeight
+    };
+
+    recordHistory();
+    setFormState(prev => ({
+      pages: prev.pages.map(p => {
+        if (p.id === pageId) return { ...p, elements: [...p.elements, newElement] };
+        return p;
+      })
+    }));
+    setSelectedIds([newElement.id]);
+  };
+
 
   // Generic updater for one or multiple elements
   const handleElementChange = (id: string, updates: Partial<TextElement>) => {
@@ -483,7 +633,16 @@ const App: React.FC = () => {
                     elements: page.elements.map(el => {
                         if (dragState.ids.includes(el.id)) {
                             const init = dragState.initialPositions[el.id];
-                            return { ...el, x: init.x + deltaX, y: init.y + deltaY };
+                            let newX = init.x + deltaX;
+                            let newY = init.y + deltaY;
+
+                            // --- SNAP TO GRID LOGIC ---
+                            if (showGrid) {
+                                newX = Math.round(newX / 20) * 20;
+                                newY = Math.round(newY / 20) * 20;
+                            }
+
+                            return { ...el, x: newX, y: newY };
                         }
                         return el;
                     })
@@ -506,9 +665,6 @@ const App: React.FC = () => {
 
         // End Selection Box - Calculate intersection
         if (selectionBox) {
-            // Find current page being hovered (simplification: assume selection is limited to visible page or global)
-            // Ideally, we project the selection box into the page coordinates.
-            // For simplicity: We will iterate all elements on all pages and check bounding rects.
             
             // Define selection rect in Client coordinates
             const selLeft = Math.min(selectionBox.startX, selectionBox.currentX);
@@ -518,82 +674,41 @@ const App: React.FC = () => {
 
             // Ignore tiny clicks
             if (selWidth > 5 && selHeight > 5) {
-                const newSelectedIds: string[] = [];
+                const hitIds: string[] = [];
                 
-                // Get all draggable elements from DOM to get their client rects
-                // This is a bit imperative but accurate for zoom/scroll logic
-                formState.pages.forEach(page => {
-                    page.elements.forEach(el => {
-                        // We check the "logical" position adjusted by zoom relative to the page container
-                        // Or easier: check if the calculated screen coordinates of the element fall inside selection
-                        // However, we don't have refs to all elements easily. 
-                        
-                        // Let's use logic based on the page containers. 
-                        // Find the page container element in DOM
-                        // This part is tricky in React without refs. 
-                        // Alternative: We know the Page ID. We can try to map client selection to Page coordinates.
-                    });
+                // Loop through all pages to find their containers
+                const pageContainers = document.querySelectorAll('.print-page-container');
+                pageContainers.forEach((container, pageIdx) => {
+                     const pageRect = container.getBoundingClientRect();
+                     const pageData = formState.pages[pageIdx];
+                     
+                     // If the page intersects the selection box
+                     if (selLeft < pageRect.right && selLeft + selWidth > pageRect.left &&
+                         selTop < pageRect.bottom && selTop + selHeight > pageRect.top) {
+                             
+                             // Calculate selection rect relative to this page (unzoomed)
+                             const relX = (selLeft - pageRect.left) / zoom;
+                             const relY = (selTop - pageRect.top) / zoom;
+                             const relW = selWidth / zoom;
+                             const relH = selHeight / zoom;
+                             
+                             // Check elements inside this page
+                             pageData.elements.forEach(el => {
+                                 if (relX < el.x + el.width && relX + relW > el.x &&
+                                     relY < el.y + el.height && relY + relH > el.y) {
+                                         hitIds.push(el.id);
+                                     }
+                             });
+                         }
                 });
-                
-                // REVISED APPROACH FOR SELECTION BOX:
-                // Since we render pages vertically, we can check intersection.
-                // But pages can be anywhere. 
-                // Let's just find the page under the mouse or check all?
-                // Checking all visible elements via document.elementsFromPoint is slow.
-                
-                // Let's do a DOM query for elements with a specific class that stores the ID.
-                const inputs = document.querySelectorAll('.print-page-container textarea');
-                inputs.forEach((input) => {
-                   const rect = input.parentElement?.getBoundingClientRect();
-                   if (rect) {
-                       // Check intersection
-                       if (selLeft < rect.right && selLeft + selWidth > rect.left &&
-                           selTop < rect.bottom && selTop + selHeight > rect.top) {
-                               // It's a hit. Find the ID. 
-                               // We need to store ID on the DOM element for this to work easily.
-                               // Let's assume DraggableInput passes data-id
-                           }
-                   }
-                });
-            }
-            
-            // Actually, let's implement the logic purely in React using the stored positions if possible, 
-            // but `formState` stores X/Y relative to page, and page is scaled/centered.
-            // Simpler: Just rely on visual DOM intersection.
-            const hitIds: string[] = [];
-            
-            // Loop through all pages to find their containers
-            const pageContainers = document.querySelectorAll('.print-page-container');
-            pageContainers.forEach((container, pageIdx) => {
-                 const pageRect = container.getBoundingClientRect();
-                 const pageData = formState.pages[pageIdx];
-                 
-                 // If the page intersects the selection box
-                 if (selLeft < pageRect.right && selLeft + selWidth > pageRect.left &&
-                     selTop < pageRect.bottom && selTop + selHeight > pageRect.top) {
-                         
-                         // Calculate selection rect relative to this page (unzoomed)
-                         const relX = (selLeft - pageRect.left) / zoom;
-                         const relY = (selTop - pageRect.top) / zoom;
-                         const relW = selWidth / zoom;
-                         const relH = selHeight / zoom;
-                         
-                         // Check elements inside this page
-                         pageData.elements.forEach(el => {
-                             if (relX < el.x + el.width && relX + relW > el.x &&
-                                 relY < el.y + el.height && relY + relH > el.y) {
-                                     hitIds.push(el.id);
-                                 }
-                         });
-                     }
-            });
 
-            if (hitIds.length > 0) {
-                // If Shift held, toggle. Else replace.
-                if (e.shiftKey) {
-                    setSelectedIds(prev => [...prev, ...hitIds.filter(id => !prev.includes(id))]);
-                } else {
-                    setSelectedIds(hitIds);
+                if (hitIds.length > 0) {
+                    // If Shift held, toggle. Else replace.
+                    if (e.shiftKey) {
+                        setSelectedIds(prev => [...prev, ...hitIds.filter(id => !prev.includes(id))]);
+                    } else {
+                        setSelectedIds(hitIds);
+                    }
                 }
             }
 
@@ -609,12 +724,28 @@ const App: React.FC = () => {
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseup', handleMouseUp);
     };
-  }, [dragState, zoom, selectionBox, formState]);
+  }, [dragState, zoom, selectionBox, formState, showGrid]);
 
 
   return (
     <div className={`flex flex-col h-screen w-full bg-slate-200/80 overflow-hidden print:h-auto print:overflow-visible font-sans ${activeTool === 'text' && !isFillMode ? 'cursor-text' : ''}`}>
       
+      {/* --- RESTORE SESSION BANNER --- */}
+      {hasRestorableSession && (
+          <div className="bg-blue-600 text-white px-4 py-2 flex items-center justify-between shadow-md z-[100] animate-in slide-in-from-top duration-300 relative">
+              <div className="flex items-center gap-3">
+                  <AlertCircle size={20} className="text-blue-200"/>
+                  <span className="font-medium text-sm">Se encontró una sesión anterior sin guardar. ¿Deseas recuperarla?</span>
+              </div>
+              <div className="flex gap-2">
+                  <button onClick={discardSession} className="px-3 py-1 bg-blue-700 hover:bg-blue-800 rounded text-xs font-semibold">Descartar</button>
+                  <button onClick={restoreSession} className="px-3 py-1 bg-white text-blue-700 hover:bg-blue-50 rounded text-xs font-bold flex items-center gap-1">
+                      <RefreshCw size={12}/> Restaurar
+                  </button>
+              </div>
+          </div>
+      )}
+
       {/* Loading Overlay */}
       {isLoading && (
         <div className="fixed inset-0 bg-white/80 backdrop-blur-sm z-[100] flex items-center justify-center">
@@ -654,6 +785,14 @@ const App: React.FC = () => {
             setSelectedIds([]); // Clear selection when switching modes
             setActiveTool('select');
         }}
+        showGrid={showGrid} onToggleGrid={() => setShowGrid(!showGrid)}
+        showSnippets={showSnippets} onToggleSnippets={() => setShowSnippets(!showSnippets)}
+      />
+
+      <SnippetsSidebar 
+        isOpen={showSnippets} 
+        onClose={() => setShowSnippets(false)} 
+        onAddSnippetToCanvas={handleAddSnippetClick}
       />
 
       {/* Main Workspace */}
@@ -694,13 +833,21 @@ const App: React.FC = () => {
                    <div
                      onMouseDown={(e) => handleMouseDownOnCanvas(e, page.id)}
                      onClick={(e) => { e.stopPropagation(); handleCanvasClick(e, page.id); }}
+                     onDragOver={(e) => {
+                         e.preventDefault(); // Allow drop
+                         e.dataTransfer.dropEffect = 'copy';
+                     }}
+                     onDrop={(e) => handleDropOnPage(e, page.id)}
                      className={`print-page-container origin-top-left bg-white shadow-2xl relative
                         ${!isFillMode && activeTool === 'text' ? 'cursor-text' : !isFillMode && activeTool === 'hand' ? 'cursor-grab' : 'cursor-default'}
                      `}
                      style={{
                         transform: `scale(${zoom})`,
                         width: '210mm',
-                        height: '297mm'
+                        height: '297mm',
+                        // --- VISUAL GRID IMPLEMENTATION ---
+                        backgroundImage: showGrid && !isFillMode ? 'radial-gradient(#cbd5e1 1px, transparent 1px)' : 'none',
+                        backgroundSize: '20px 20px'
                      }}
                    >
                        <img src={page.imageUrl} alt={`Página ${index + 1}`} className="w-full h-full select-none pointer-events-none block object-contain" />
@@ -712,6 +859,7 @@ const App: React.FC = () => {
                                onSelect={handleSelectElement} onChange={handleElementChange} onDelete={handleElementDelete}
                                onDuplicate={handleElementDuplicate} onMouseDown={startDrag} onRecordHistory={recordHistory}
                                isFillMode={isFillMode}
+                               snapToGrid={showGrid}
                            />
                        ))}
                    </div>

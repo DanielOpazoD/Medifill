@@ -15,6 +15,7 @@ interface DraggableInputProps {
   onMouseDown: (e: React.MouseEvent, id: string) => void;
   onRecordHistory: () => void;
   isFillMode: boolean;
+  snapToGrid: boolean;
 }
 
 export const DraggableInput: React.FC<DraggableInputProps> = ({
@@ -28,10 +29,12 @@ export const DraggableInput: React.FC<DraggableInputProps> = ({
   onDuplicate,
   onMouseDown,
   onRecordHistory,
-  isFillMode
+  isFillMode,
+  snapToGrid
 }) => {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const isHandMode = activeTool === 'hand';
+  const GRID_SIZE = 20;
 
   // --- Resizing Logic (Width & Height) ---
   const handleResize = (e: React.MouseEvent) => {
@@ -48,8 +51,13 @@ export const DraggableInput: React.FC<DraggableInputProps> = ({
       const deltaX = (moveEvent.clientX - startX) / scale;
       const deltaY = (moveEvent.clientY - startY) / scale;
 
-      const newWidth = Math.max(20, startWidth + deltaX);
-      const newHeight = Math.max(element.fontSize, startHeight + deltaY);
+      let newWidth = Math.max(20, startWidth + deltaX);
+      let newHeight = Math.max(element.fontSize, startHeight + deltaY);
+
+      if (snapToGrid) {
+          newWidth = Math.round(newWidth / GRID_SIZE) * GRID_SIZE;
+          newHeight = Math.round(newHeight / GRID_SIZE) * GRID_SIZE;
+      }
 
       onChange(element.id, { 
         width: Math.round(newWidth),

@@ -1,6 +1,6 @@
 
 import React, { useRef, useState, useEffect } from 'react';
-import { Upload, Printer, Download, FileJson, Bold, Italic, Trash2, RotateCcw, RotateCw, ZoomIn, ZoomOut, LayoutTemplate, Minus, Plus, FilePlus, Hand, MousePointer2, Type as TypeIcon, CaseUpper, Settings, X, Eraser, PenLine, Eye, ChevronDown } from 'lucide-react';
+import { Upload, Printer, Download, FileJson, Bold, Italic, Trash2, RotateCcw, RotateCw, ZoomIn, ZoomOut, LayoutTemplate, Minus, Plus, FilePlus, Hand, MousePointer2, Type as TypeIcon, CaseUpper, Settings, X, Eraser, PenLine, Eye, ChevronDown, Grid3X3, BookOpen } from 'lucide-react';
 import { TextElement, ToolType, DefaultSettings } from '../types';
 import { TEMPLATES } from '../templates';
 
@@ -29,6 +29,10 @@ interface ToolbarProps {
   onUpdateDefaultSettings: (settings: DefaultSettings) => void;
   isFillMode: boolean;
   onToggleFillMode: () => void;
+  showGrid: boolean;
+  onToggleGrid: () => void;
+  showSnippets: boolean;
+  onToggleSnippets: () => void;
 }
 
 export const Toolbar: React.FC<ToolbarProps> = ({
@@ -55,7 +59,11 @@ export const Toolbar: React.FC<ToolbarProps> = ({
   defaultSettings,
   onUpdateDefaultSettings,
   isFillMode,
-  onToggleFillMode
+  onToggleFillMode,
+  showGrid,
+  onToggleGrid,
+  showSnippets,
+  onToggleSnippets
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const jsonInputRef = useRef<HTMLInputElement>(null);
@@ -276,13 +284,34 @@ export const Toolbar: React.FC<ToolbarProps> = ({
                     <RotateCw size={18} />
                 </button>
             </div>
+            
+            {/* Divider for New Features */}
+             <div className="w-px h-5 bg-slate-300 mx-2"></div>
+
+             {/* Grid Toggle */}
+             <button
+                onClick={onToggleGrid}
+                className={`p-1.5 rounded-md transition-all ${showGrid ? 'bg-blue-100 text-blue-600 ring-1 ring-blue-200' : 'text-slate-500 hover:bg-slate-100'}`}
+                title="Mostrar/Ocultar Cuadrícula de alineación"
+             >
+                <Grid3X3 size={18} />
+             </button>
+
+             {/* Snippets Toggle */}
+             <button
+                onClick={onToggleSnippets}
+                className={`p-1.5 rounded-md transition-all ${showSnippets ? 'bg-purple-100 text-purple-600 ring-1 ring-purple-200' : 'text-slate-500 hover:bg-slate-100'}`}
+                title="Frases Rápidas (Snippets)"
+             >
+                <BookOpen size={18} />
+             </button>
           </>
         )}
       </div>
 
       {/* ================= SECCIÓN CENTRAL: CONTEXTUAL (SOLO SI HAY SELECCIÓN) ================= */}
       {!isFillMode && selectedElements.length > 0 && (
-          <div className="flex items-center gap-2 animate-in fade-in slide-in-from-top-2 duration-200 bg-white shadow-lg border border-slate-200 rounded-lg px-3 py-1.5 absolute left-1/2 -translate-x-1/2 top-14 md:top-auto md:relative md:left-auto md:translate-x-0 md:shadow-none md:border-none md:bg-transparent">
+          <div className="flex items-center gap-2 animate-in fade-in slide-in-from-top-2 duration-200 bg-white shadow-lg border border-slate-200 rounded-lg px-3 py-1.5 absolute left-1/2 -translate-x-1/2 top-14 md:top-auto md:relative md:left-auto md:translate-x-0 md:shadow-none md:border-none md:bg-transparent z-50">
              
               {/* Dimensions */}
               <div className="flex items-center gap-1 bg-slate-50 rounded-md px-2 py-1 border border-slate-200 text-xs text-slate-600">
