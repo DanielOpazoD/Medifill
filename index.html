@@ -15,12 +15,14 @@
       /* --- Estilos de Impresión --- */
       @media print {
         @page {
-          size: A4 portrait;
-          margin: 0 !important;
+          /* Permitir que el navegador controle el tamaño y márgenes si el usuario lo desea */
+          size: auto; 
+          margin: 0mm; 
         }
 
         html, body {
-          width: 210mm;
+          /* Eliminamos restricciones rígidas de ancho para permitir que el navegador escale el contenido */
+          width: auto !important;
           height: auto !important; 
           min-height: 100%;
           background: white !important;
@@ -42,6 +44,9 @@
 
         /* 
            Contenedor de Página para Impresión:
+           Mantenemos dimensiones fijas de A4 (210mm x 297mm) para preservar 
+           la posición absoluta de los elementos sobre la imagen de fondo.
+           El navegador escalará este contenedor si el usuario ajusta la escala de impresión.
         */
         .print-page-container {
           position: relative !important;
