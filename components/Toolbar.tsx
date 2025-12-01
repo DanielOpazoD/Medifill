@@ -1,5 +1,5 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { Upload, Printer, Download, FileJson, Bold, Italic, Trash2, RotateCcw, RotateCw, ZoomIn, ZoomOut, LayoutTemplate, Minus, Plus, FilePlus, Hand, MousePointer2, Type as TypeIcon, CaseUpper, Settings, X, Eraser, PenLine, Eye, ChevronDown, Grid3X3, BookOpen, Indent } from 'lucide-react';
+import { Upload, Printer, Download, FileJson, Bold, Italic, Trash2, RotateCcw, RotateCw, ZoomIn, ZoomOut, Minus, Plus, FilePlus, Hand, MousePointer2, Type as TypeIcon, CaseUpper, Settings, X, Eraser, PenLine, Eye, BookOpen, Indent, ChevronDown } from 'lucide-react';
 import { TextElement, ToolType, DefaultSettings } from '../types';
 import { TEMPLATES } from '../templates';
 
@@ -29,8 +29,6 @@ interface ToolbarProps {
   onUpdateDefaultSettings: (settings: DefaultSettings) => void;
   isFillMode: boolean;
   onToggleFillMode: () => void;
-  showGrid: boolean;
-  onToggleGrid: () => void;
   showSnippets: boolean;
   onToggleSnippets: () => void;
 }
@@ -61,8 +59,6 @@ export const Toolbar: React.FC<ToolbarProps> = ({
   onUpdateDefaultSettings,
   isFillMode,
   onToggleFillMode,
-  showGrid,
-  onToggleGrid,
   showSnippets,
   onToggleSnippets
 }) => {
@@ -110,18 +106,10 @@ export const Toolbar: React.FC<ToolbarProps> = ({
   const firstSelected = selectedElements[0];
   const isMultiple = selectedElements.length > 1;
   const currentFontSize = firstSelected ? firstSelected.fontSize : defaultSettings.fontSize;
-  const currentLineHeight = firstSelected?.lineHeight || 1.0;
   
   // Handlers for manual inputs
   const handleManualResize = (dim: 'width' | 'height', val: number) => {
       onUpdateStyle({ [dim]: val });
-  };
-
-  const changeLineHeight = (delta: number) => {
-    if (selectedElements.length === 0) return;
-    const current = firstSelected.lineHeight || 1.0;
-    const newValue = Math.max(0.5, Math.min(2.0, current + delta));
-    onUpdateStyle({ lineHeight: Math.round(newValue * 10) / 10 });
   };
 
   // Separador vertical
@@ -162,12 +150,41 @@ export const Toolbar: React.FC<ToolbarProps> = ({
       {/* ================= SECCIÓN IZQUIERDA: ARCHIVO Y GENERAL ================= */}
       <div className="flex items-center gap-1">
         
-        {/* Logo */}
-        <div className="flex items-center gap-2 mr-2 select-none pr-2 border-r border-slate-200">
-          <div className="bg-gradient-to-br from-blue-600 to-blue-700 text-white p-1.5 rounded-md shadow-sm">
-            <FilePlus size={18} />
-          </div>
-          <span className="text-lg font-bold text-slate-800 tracking-tight hidden 2xl:inline">MediFill</span>
+        {/* Logo & Templates Menu */}
+        <div className="relative mr-2 pr-2 border-r border-slate-200" ref={templateMenuRef}>
+             <button 
+                onClick={() => setIsTemplateMenuOpen(!isTemplateMenuOpen)}
+                className="flex items-center gap-2 select-none hover:bg-slate-100 p-1 rounded-lg transition-colors"
+                title="Menú de Plantillas"
+             >
+                <div className="bg-gradient-to-br from-blue-600 to-blue-700 text-white p-1.5 rounded-md shadow-sm">
+                    <FilePlus size={18} />
+                </div>
+                <div className="flex flex-col items-start leading-none">
+                    <span className="text-lg font-bold text-slate-800 tracking-tight hidden 2xl:inline">MediFill</span>
+                    <span className="text-[9px] text-slate-400 font-semibold hidden 2xl:inline flex items-center gap-0.5">
+                       PLANTILLAS <ChevronDown size={8}/>
+                    </span>
+                </div>
+             </button>
+
+             {isTemplateMenuOpen && (
+                <div className="absolute top-full left-0 mt-1 w-56 bg-white border border-slate-200 rounded-lg shadow-xl z-50 p-1 animate-in fade-in zoom-in-95 duration-100">
+                    <div className="px-3 py-2 text-xs font-semibold text-slate-400 uppercase tracking-wider">Disponibles</div>
+                    {TEMPLATES.map(template => (
+                    <button 
+                        key={template.id}
+                        onClick={() => {
+                            onLoadTemplate(template.id);
+                            setIsTemplateMenuOpen(false);
+                        }}
+                        className="w-full text-left px-3 py-2 hover:bg-blue-50 text-sm text-slate-700 rounded-md transition-colors"
+                    >
+                        {template.name}
+                    </button>
+                    ))}
+                </div>
+            )}
         </div>
 
         {/* Modo Toggle */}
@@ -184,6 +201,16 @@ export const Toolbar: React.FC<ToolbarProps> = ({
             {isFillMode ? "MODO RELLENAR" : "MODO EDICIÓN"}
         </button>
 
+        {/* Undo/Redo (Available in both modes) */}
+        <div className="flex items-center gap-1 ml-0 mr-2 border-r border-slate-200 pr-2">
+            <button onClick={onUndo} disabled={!canUndo} className="p-1.5 hover:bg-slate-100 rounded text-slate-600 disabled:opacity-30 transition-all" title="Deshacer (Ctrl+Z)">
+                <RotateCcw size={18} />
+            </button>
+            <button onClick={onRedo} disabled={!canRedo} className="p-1.5 hover:bg-slate-100 rounded text-slate-600 disabled:opacity-30 transition-all" title="Rehacer (Ctrl+Y)">
+                <RotateCw size={18} />
+            </button>
+        </div>
+
         {!isFillMode && (
           <>
             {/* --- GRUPO: ARCHIVO --- */}
@@ -192,41 +219,10 @@ export const Toolbar: React.FC<ToolbarProps> = ({
                 <input type="file" accept="image/png, image/jpeg" multiple className="hidden" ref={fileInputRef} onChange={handleFileChange} />
                 <ToolButton 
                     icon={Upload} 
-                    label="Subir Imágenes" 
+                    label="IMG" 
                     onClick={() => fileInputRef.current?.click()} 
                     className="hover:text-blue-600"
                 />
-
-                {/* Templates Dropdown */}
-                <div className="relative" ref={templateMenuRef}>
-                    <button 
-                        onClick={() => setIsTemplateMenuOpen(!isTemplateMenuOpen)}
-                        className={`flex items-center gap-1 px-2 py-1.5 text-slate-600 hover:bg-slate-200 rounded-md text-sm font-medium transition-all ${isTemplateMenuOpen ? 'bg-slate-200' : ''}`}
-                        title="Plantillas Predefinidas"
-                    >
-                        <LayoutTemplate size={18} />
-                        <span className="hidden xl:inline">Plantillas</span>
-                        <ChevronDown size={12} className="opacity-50"/>
-                    </button>
-                    
-                    {isTemplateMenuOpen && (
-                        <div className="absolute top-full left-0 mt-1 w-56 bg-white border border-slate-200 rounded-lg shadow-xl z-50 p-1 animate-in fade-in zoom-in-95 duration-100">
-                            <div className="px-3 py-2 text-xs font-semibold text-slate-400 uppercase tracking-wider">Disponibles</div>
-                            {TEMPLATES.map(template => (
-                            <button 
-                                key={template.id}
-                                onClick={() => {
-                                    onLoadTemplate(template.id);
-                                    setIsTemplateMenuOpen(false);
-                                }}
-                                className="w-full text-left px-3 py-2 hover:bg-blue-50 text-sm text-slate-700 rounded-md transition-colors"
-                            >
-                                {template.name}
-                            </button>
-                            ))}
-                        </div>
-                    )}
-                </div>
 
                 {/* Import / Export */}
                 <div className="w-px h-5 bg-slate-200 mx-1"></div>
@@ -253,18 +249,16 @@ export const Toolbar: React.FC<ToolbarProps> = ({
                 <button 
                     onClick={() => onToolChange('select')} 
                     className={`p-1.5 px-3 rounded-md transition-all flex items-center gap-2 text-sm font-medium ${activeTool === 'select' ? 'bg-white shadow text-blue-600' : 'text-slate-500 hover:text-slate-700'}`}
-                    title="Selección (Click o arrastrar)"
+                    title="Seleccionar"
                 >
                     <MousePointer2 size={18} />
-                    <span className="hidden lg:inline">Seleccionar</span>
                 </button>
                 <button 
                     onClick={() => onToolChange('hand')} 
                     className={`p-1.5 px-3 rounded-md transition-all flex items-center gap-2 text-sm font-medium ${activeTool === 'hand' ? 'bg-white shadow text-blue-600' : 'text-slate-500 hover:text-slate-700'}`}
-                    title="Mano (Mover lienzo)"
+                    title="Mover lienzo"
                 >
                     <Hand size={18} />
-                    <span className="hidden lg:inline">Mover</span>
                 </button>
                 <button 
                     onClick={() => onToolChange('text')} 
@@ -275,28 +269,9 @@ export const Toolbar: React.FC<ToolbarProps> = ({
                     <span className="hidden lg:inline">Texto</span>
                 </button>
             </div>
-
-            {/* Undo/Redo */}
-            <div className="flex items-center gap-1 ml-2">
-                <button onClick={onUndo} disabled={!canUndo} className="p-1.5 hover:bg-slate-100 rounded text-slate-600 disabled:opacity-30 transition-all" title="Deshacer (Ctrl+Z)">
-                    <RotateCcw size={18} />
-                </button>
-                <button onClick={onRedo} disabled={!canRedo} className="p-1.5 hover:bg-slate-100 rounded text-slate-600 disabled:opacity-30 transition-all" title="Rehacer (Ctrl+Y)">
-                    <RotateCw size={18} />
-                </button>
-            </div>
             
             {/* Divider for New Features */}
              <div className="w-px h-5 bg-slate-300 mx-2"></div>
-
-             {/* Grid Toggle */}
-             <button
-                onClick={onToggleGrid}
-                className={`p-1.5 rounded-md transition-all ${showGrid ? 'bg-blue-100 text-blue-600 ring-1 ring-blue-200' : 'text-slate-500 hover:bg-slate-100'}`}
-                title="Mostrar/Ocultar Cuadrícula de alineación"
-             >
-                <Grid3X3 size={18} />
-             </button>
           </>
         )}
 
@@ -363,19 +338,6 @@ export const Toolbar: React.FC<ToolbarProps> = ({
                       className="w-10 bg-transparent text-center text-sm font-bold text-slate-700 outline-none"
                       title="Tamaño de letra"
                   />
-              </div>
-
-               {/* Line Height */}
-               <div className="hidden md:flex items-center gap-1 bg-slate-100 rounded-lg px-1 py-1 border border-slate-200" title="Interlineado">
-                <button onClick={() => changeLineHeight(-0.1)} className="p-1 hover:bg-white hover:text-blue-600 rounded text-slate-500 transition-colors" disabled={currentLineHeight <= 0.5}>
-                    <Minus size={12} />
-                </button>
-                <span className="text-xs font-semibold w-8 text-center text-slate-700">
-                    {Math.round(currentLineHeight * 100)}%
-                </span>
-                <button onClick={() => changeLineHeight(0.1)} className="p-1 hover:bg-white hover:text-blue-600 rounded text-slate-500 transition-colors" disabled={currentLineHeight >= 2.0}>
-                    <Plus size={12} />
-                </button>
               </div>
 
               {/* Actions */}
@@ -473,7 +435,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
             onClick={onPrint}
             disabled={!hasPages}
             className="flex items-center justify-center p-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 hover:shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none"
-            title="Impresión rápida (Navegador)"
+            title="Imprimir"
             >
                 <Printer size={20} />
             </button>

@@ -25,7 +25,6 @@ const App: React.FC = () => {
   const [isFillMode, setIsFillMode] = useState(false);
   
   // New Feature States
-  const [showGrid, setShowGrid] = useState(false);
   const [showSnippets, setShowSnippets] = useState(false);
   const [hasRestorableSession, setHasRestorableSession] = useState(false);
   
@@ -427,12 +426,6 @@ const App: React.FC = () => {
     const { width, height, fontSize, indent } = defaultSettings;
     let adjustedY = y - (height * 0.5);
 
-    // --- SNAP TO GRID ON CREATION ---
-    if (showGrid) {
-        x = Math.round(x / 20) * 20;
-        adjustedY = Math.round(adjustedY / 20) * 20;
-    }
-
     const newElement: TextElement = {
       id: generateId(),
       x, y: adjustedY,
@@ -513,12 +506,6 @@ const App: React.FC = () => {
     // Center the element on the mouse
     const height = defaultSettings.height;
     y = y - (height * 0.5);
-
-    // Snap
-    if (showGrid) {
-        x = Math.round(x / 20) * 20;
-        y = Math.round(y / 20) * 20;
-    }
 
     const newElement: TextElement = {
       id: generateId(),
@@ -657,13 +644,6 @@ const App: React.FC = () => {
                             const init = dragState.initialPositions[el.id];
                             let newX = init.x + deltaX;
                             let newY = init.y + deltaY;
-
-                            // --- SNAP TO GRID LOGIC ---
-                            if (showGrid) {
-                                newX = Math.round(newX / 20) * 20;
-                                newY = Math.round(newY / 20) * 20;
-                            }
-
                             return { ...el, x: newX, y: newY };
                         }
                         return el;
@@ -746,7 +726,7 @@ const App: React.FC = () => {
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseup', handleMouseUp);
     };
-  }, [dragState, zoom, selectionBox, formState, showGrid]);
+  }, [dragState, zoom, selectionBox, formState]);
 
 
   return (
@@ -808,7 +788,6 @@ const App: React.FC = () => {
             setSelectedIds([]); // Clear selection when switching modes
             setActiveTool('select');
         }}
-        showGrid={showGrid} onToggleGrid={() => setShowGrid(!showGrid)}
         showSnippets={showSnippets} onToggleSnippets={() => setShowSnippets(!showSnippets)}
       />
 
@@ -868,9 +847,6 @@ const App: React.FC = () => {
                         transform: `scale(${zoom})`,
                         width: '210mm',
                         height: '297mm',
-                        // --- VISUAL GRID IMPLEMENTATION ---
-                        backgroundImage: showGrid && !isFillMode ? 'radial-gradient(#cbd5e1 1px, transparent 1px)' : 'none',
-                        backgroundSize: '20px 20px'
                      }}
                    >
                        <img src={page.imageUrl} alt={`Página ${index + 1}`} className="w-full h-full select-none pointer-events-none block object-contain" />
@@ -882,7 +858,6 @@ const App: React.FC = () => {
                                onSelect={handleSelectElement} onChange={handleElementChange} onDelete={handleElementDelete}
                                onDuplicate={handleElementDuplicate} onMouseDown={startDrag} onRecordHistory={recordHistory}
                                isFillMode={isFillMode}
-                               snapToGrid={showGrid}
                            />
                        ))}
                    </div>
